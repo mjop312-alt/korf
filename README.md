@@ -5,22 +5,27 @@ Dit is de **kern uit fase 4**: de geverifieerde scenario-engine, mockdata, een A
 en twee werkende schermen. Het merkconcept, de blauwdruk en de architectuur staan in de
 bijbehorende documenten (fase 1–3).
 
-> **`DATA_MODE=live`**: deze lokale instantie haalt echte prijzen op bij Albert Heijn, Jumbo en
+> **`DATA_MODE=live`**: deze instantie haalt echte prijzen op bij Albert Heijn, Jumbo en
 > Lidl (onofficiële zoek-API's, zie `lib/providers/`). Zet terug op `mock` in `.env` voor
-> stabiele demodata. In productie vult de ingestion-worker PostgreSQL, elke prijs met een
-> `collected_at`.
+> stabiele demodata. Draait op **Postgres (Neon)** — elke prijs met een `collected_at`.
 
 ## Draaien
 
 ```bash
-npm install            # draait ook 'prisma generate'
-cp .env.example .env    # (of gebruik de meegeleverde .env)
-npm run db:push        # maakt de lokale SQLite-database (prisma/dev.db)
-npm run db:seed        # vult 'm met de mockdata + een demo-account
-npm run dev            # http://localhost:3000
+npm install             # draait ook 'prisma generate'
+cp .env.example .env    # vul DATABASE_URL in met je eigen Postgres-connectiestring (bv. Neon)
+npm run db:push         # zet het schema op die database
+npm run db:seed         # vult 'm met de mockdata + een demo-account
+npm run dev             # http://localhost:3000
 ```
 
-Node 20+ (getest op Node 24).
+Node 20+ (getest op Node 24). Werkt ook lokaal zonder externe dienst: zet `DATABASE_URL` op
+`file:./dev.db` en `provider` in `prisma/schema.prisma` terug op `"sqlite"` — het schema is
+bewust portabel geschreven, dat werkte hiervoor prima.
+
+**Let op met `npm run db:reset`**: dat draait `--force-reset` tegen wat er ook in
+`DATABASE_URL` staat. Op een gedeelde Neon-database is dat net zo destructief als op een
+lokaal bestand — geen bevestigingsvraag.
 
 **Demo-login:** `demo@korf.nl` / `demo1234`
 
@@ -38,7 +43,7 @@ Node 20+ (getest op Node 24).
 
 | Pad | Wat |
 | --- | --- |
-| `prisma/schema.prisma` | Volledig datamodel. **Lokaal SQLite**, portabel geschreven; voor productie → `provider = "postgresql"` + Neon/Supabase-URL + `prisma migrate`. |
+| `prisma/schema.prisma` | Volledig datamodel. Draait op **Postgres (Neon)**, portabel geschreven (werkte hiervoor ook op lokale SQLite zonder wijzigingen aan het schema zelf). |
 | `prisma/seed.ts` | Zet `lib/mock-data.ts` in de DB + demo-account met voorbeeldlijst. |
 | `lib/db.ts` | Prisma-client singleton. |
 | `auth.ts` / `auth.config.ts` / `middleware.ts` | Auth.js v5 — e-mail/wachtwoord-login, JWT-sessies, `/dashboard` · `/lijsten` · `/instellingen` afgeschermd. |

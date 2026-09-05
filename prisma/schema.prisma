@@ -1,22 +1,18 @@
 // Korf — databaseschema.
 //
-// LOKAAL draait dit op SQLite (file:./dev.db) zodat het meteen werkt zonder
-// externe dienst. Het schema is bewust PORTABEL geschreven:
+// Draait op Postgres (Neon). Het schema is bewust PORTABEL geschreven (werkte eerder
+// ook op lokale SQLite zonder wijzigingen):
 //   - geen Prisma-enums  → String met toegestane waarden in commentaar (validatie in Zod)
 //   - cuid()- id's i.p.v. uuid
 //   - Json voor flexibele velden (werkt op SQLite én Postgres)
 //   - bedragen in hele centen (Int)
-//
-// PRODUCTIE (Postgres): zet `provider = "postgresql"` hieronder, zet DATABASE_URL
-// op een Neon/Supabase-connectiestring, en gebruik `prisma migrate deploy`
-// i.p.v. `prisma db push`.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
