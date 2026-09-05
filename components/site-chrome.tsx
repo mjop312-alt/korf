@@ -31,6 +31,7 @@ export function SiteFooter() {
         <Link href="/betrouwbaarheid" className="hover:text-ink">Betrouwbaarheid</Link>
         <Link href="/over" className="hover:text-ink">Over Korf</Link>
         <Link href="/privacy" className="hover:text-ink">Privacy</Link>
+        <Link href="/voorwaarden" className="hover:text-ink">Voorwaarden</Link>
         <span className="ml-auto">Demo- en mockdata tenzij een echte databron is aangesloten.</span>
       </div>
     </footer>

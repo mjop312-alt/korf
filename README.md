@@ -110,6 +110,14 @@ Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/
 | `prisma/schema.prisma` (`SavingsRecord`) + `lib/savings.ts` | **Besparingsgeschiedenis** — een afgeronde boodschappentrip ("boodschappen doen": alles afvinken én "afgevinkte producten weghalen") legt een snapshot vast (bedrag, besparing, winkel(s)). Dashboard toont nu een balkjesgrafiek per maand + een lifetime-totaal, naast de bestaande "potentiële besparing op je huidige lijst". |
 | `scripts/check-alerts.ts` | **Alert-trigger-job** — vergelijkt elke opgeslagen prijsalert met de actuele laagste prijs, logt treffers en zet `lastTriggeredAt` (niet vaker dan 1x/24u per alert). **Verstuurt nog geen echte melding** — er is nog geen e-mailprovider aangesloten; zodra die er is, vervangt een verzendstap de `console.log` in dit script. Draai dit periodiek via cron. |
 
+## Legal & SEO
+
+| Pad | Wat |
+| --- | --- |
+| `app/over`, `app/privacy`, `app/voorwaarden` | Templated pagina's (zelfde Q&A-stijl als `/betrouwbaarheid`), eerlijk gelabeld als **geen door een jurist opgestelde tekst** — Korf is een demoproject, geen geregistreerd bedrijf. Vervang de inhoud zodra dat wel zo is. Nu ook gelinkt vanuit de footer en het registratiescherm. |
+| `app/sitemap.ts` / `app/robots.ts` | Next's ingebouwde `sitemap.xml`/`robots.txt`-generators. Sitemap bevat de statische marketingpagina's + alle 65 canonieke producten (`/product/[slug]`); robots sluit de ingelogde schermen uit. Zet `NEXT_PUBLIC_SITE_URL` in productie op het echte domein. |
+| `app/product/[slug]/page.tsx` | JSON-LD (`schema.org/Product` + `Offer` per winkel) toegevoegd voor rijke zoekresultaten. |
+
 ## Wat zit erin
 
 | Pad | Wat |

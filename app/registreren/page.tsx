@@ -94,6 +94,13 @@ export default function RegistrerenPage() {
             {busy ? "Bezig…" : "Account maken"}
           </button>
         </form>
+
+        <p className="mt-4 text-xs text-muted">
+          Met een account maken ga je akkoord met de{" "}
+          <Link href="/voorwaarden" className="text-brass underline underline-offset-2">voorwaarden</Link>{" "}
+          en de{" "}
+          <Link href="/privacy" className="text-brass underline underline-offset-2">privacyverklaring</Link>.
+        </p>
       </main>
     </div>
   );

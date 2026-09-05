@@ -37,8 +37,26 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const [alert, fav] = await Promise.all([getMyAlert(slug), isFavorite(slug)]);
   const lowest = product.lowest;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    category: product.category,
+    offers: product.offers.map((o) => ({
+      "@type": "Offer",
+      price: (o.effectiveCents / 100).toFixed(2),
+      priceCurrency: "EUR",
+      availability: "https://schema.org/InStock",
+      seller: { "@type": "Organization", name: o.storeName },
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-ground text-text">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <SiteHeader />
       <main className="mx-auto max-w-4xl px-6 py-10">
         <Link href={`/aanbiedingen?categorie=${product.categorySlug}`} className="font-mono text-xs text-muted hover:text-ink">
