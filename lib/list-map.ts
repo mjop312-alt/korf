@@ -10,6 +10,7 @@ export function dbToBrandMode(
 ): BrandMode {
   if (brandMode === "pinned_brand" && pinnedBrandName) return { brand: pinnedBrandName };
   if (brandMode === "own_brand") return "own";
+  if (brandMode === "a_brand") return "a_brand";
   return "any";
 }
 
@@ -17,6 +18,7 @@ export function dbToBrandMode(
 export function brandModeToDb(mode: BrandMode): { brandMode: string; brandName: string | null } {
   if (mode === "any") return { brandMode: "any", brandName: null };
   if (mode === "own") return { brandMode: "own_brand", brandName: null };
+  if (mode === "a_brand") return { brandMode: "a_brand", brandName: null };
   return { brandMode: "pinned_brand", brandName: mode.brand };
 }
 

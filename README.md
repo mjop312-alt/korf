@@ -29,7 +29,8 @@ Node 20+ (getest op Node 24).
 | `npm test` / `npm run typecheck` | Vitest (21) / `tsc --noEmit` |
 | `npm run db:reset` | schema opnieuw + opnieuw seeden (wist alles) |
 | `npm run db:studio` | Prisma Studio — de database bekijken |
-| `npm run ingest` | ingestion-worker: providers → database (nu MockProvider) |
+| `npm run ingest` | ingestion-worker: providers → database (mock, of AH/Jumbo/Lidl bij `DATA_MODE=live`) |
+| `npm run check-alerts` | alert-trigger-job: checkt prijsalerts tegen actuele prijzen, logt treffers (nog geen e-mail — zie hieronder) |
 
 ## Fundering (M0)
 
@@ -99,6 +100,15 @@ Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/
 | `app/gedeeld/[token]/page.tsx` | Publieke deelpagina (geen login nodig om te bekijken). Bij `copy`-modus: knop "kopieer naar mijn lijsten" (login vereist). |
 | `app/lijst/[id]/doen/page.tsx` + `components/shopping-checklist.tsx` | "Boodschappen doen"-modus: het gekozen vergelijk-scenario als afvinklijst, gegroepeerd per winkel, met voortgangsbalk en "afgevinkte producten weghalen". Aan te roepen vanaf `/vergelijk` zodra je een scenario hebt gekozen. |
 | `lib/use-action-queue.ts` | **Belangrijk voor toekomstig werk.** Er zat een bug: snel-achter-elkaar rechtstreeks (niet via `<form action>`) aangeroepen server-acties konden elkaar overschrijven — alleen de eerste schrijfactie persisteerde, ondanks HTTP 200 op alle requests. Root cause zat in Next.js' server-action-dispatch, niet in Prisma/SQLite (bevestigd met een losstaand script buiten Next om). Fix: `useActionQueue()` rijgt acties in een promise-keten zodat er nooit twee tegelijk in-flight zijn. Toegepast in `shopping-checklist.tsx` en `list-editor.tsx`. **Gebruik deze hook in elk nieuw component dat server-acties rechtstreeks (niet via een `<form>`) en mogelijk snel na elkaar aanroept.** |
+
+## Kleine functionele gaten gedicht (na Delen & afvinken)
+
+| Pad | Wat |
+| --- | --- |
+| `prisma/schema.prisma` (`ShoppingList.storeIds`) + `lib/list-actions.ts` (`setListStores`) | **Winkelselectie per lijst** — elke lijst onthoudt nu zijn eigen winkelselectie (was een algemene voorkeur die bij elke lijst opnieuw gold). Valt terug op de algemene voorkeur als een lijst nog niets heeft opgeslagen. |
+| `lib/types.ts` (`BrandMode`), `lib/compare.ts`, `lib/catalog.ts` | **"Altijd A-merk"** is nu een echte merkkeuze (`a_brand`) naast "maakt niet uit" / vastgezet merk / "alleen huismerk" — kiest de goedkoopste niet-huismerk-variant, telt als ontbrekend als een winkel alleen een huismerk voert. De instelling "Altijd A-merk" onder Voorkeuren zet 'm nu ook echt als default voor nieuwe lijstregels. |
+| `prisma/schema.prisma` (`SavingsRecord`) + `lib/savings.ts` | **Besparingsgeschiedenis** — een afgeronde boodschappentrip ("boodschappen doen": alles afvinken én "afgevinkte producten weghalen") legt een snapshot vast (bedrag, besparing, winkel(s)). Dashboard toont nu een balkjesgrafiek per maand + een lifetime-totaal, naast de bestaande "potentiële besparing op je huidige lijst". |
+| `scripts/check-alerts.ts` | **Alert-trigger-job** — vergelijkt elke opgeslagen prijsalert met de actuele laagste prijs, logt treffers en zet `lastTriggeredAt` (niet vaker dan 1x/24u per alert). **Verstuurt nog geen echte melding** — er is nog geen e-mailprovider aangesloten; zodra die er is, vervangt een verzendstap de `console.log` in dit script. Draai dit periodiek via cron. |
 
 ## Wat zit erin
 

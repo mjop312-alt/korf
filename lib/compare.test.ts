@@ -55,6 +55,20 @@ describe("merkvoorkeur", () => {
     const r = run([item("pindakaas")], ["ah"]);
     expect(r.perStoreTotals.ah.totalCents).toBe(175); // AH-huismerk i.p.v. Calvé 329
   });
+
+  it("kiest bij 'altijd A-merk' de goedkoopste A-merk-variant, nooit de huismerk", () => {
+    // koffie bij ah: Perla (huismerk) 419 is goedkoper, maar telt niet mee voor a_brand
+    const r = run([item("koffie", 1, "a_brand")], ["ah"]);
+    expect(r.perStoreTotals.ah.totalCents).toBe(549); // Kanis & Gunnink, niet Perla (419) of Douwe Egberts (649)
+  });
+
+  it("'altijd A-merk' telt als ontbrekend als een winkel alleen een huismerk voert", () => {
+    // koffie bij lidl: alleen Bellarom (huismerk) — geen A-merk beschikbaar
+    const r = run([item("koffie", 1, "a_brand")], ["lidl"]);
+    expect(r.perStoreTotals.lidl.missing).toBe(1);
+    expect(isBrandModeAvailable("a_brand", product("koffie"), ["lidl"])).toBe(false);
+    expect(isBrandModeAvailable("a_brand", product("koffie"), ["ah"])).toBe(true);
+  });
 });
 
 describe("promoties", () => {

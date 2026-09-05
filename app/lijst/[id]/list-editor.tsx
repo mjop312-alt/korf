@@ -13,6 +13,7 @@ import {
   removeItem,
   renameList,
   setActiveList,
+  setListStores,
   updateItem,
 } from "@/lib/list-actions";
 import { CATALOG } from "@/lib/mock-data";
@@ -78,7 +79,11 @@ export function ListEditor({
 
   const toggleStore = (id: string) => {
     setNote(null);
-    setStores((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+    setStores((prev) => {
+      const next = prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id];
+      enqueue(() => setListStores(list.id, next));
+      return next;
+    });
   };
 
   // merkkeuzes die niet meer kunnen bij de gekozen winkels → terug naar "maakt niet uit" (ook op de server)

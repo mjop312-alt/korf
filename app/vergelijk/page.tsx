@@ -34,7 +34,7 @@ const SCENARIOS = [
 type ScenarioKey = (typeof SCENARIOS)[number]["key"];
 
 const brandLabel = (m: BrandMode) =>
-  m === "any" ? "maakt niet uit" : m === "own" ? "alleen huismerk" : m.brand;
+  m === "any" ? "maakt niet uit" : m === "own" ? "alleen huismerk" : m === "a_brand" ? "altijd A-merk" : m.brand;
 
 export default async function VergelijkPage({
   searchParams,
@@ -296,7 +296,7 @@ export default async function VergelijkPage({
                       if ("missing" in cell) {
                         return (
                           <td key={id} className="p-3 text-right font-mono text-muted">
-                            {row.brandMode === "any" ? "—" : "niet in dit merk"}
+                            {row.brandMode === "any" ? "—" : cell.reason}
                           </td>
                         );
                       }
@@ -315,7 +315,7 @@ export default async function VergelijkPage({
                               {cell.promo.label}
                             </span>
                           )}
-                          {row.brandMode === "any" && (
+                          {(row.brandMode === "any" || row.brandMode === "a_brand") && (
                             <span className="block text-[0.6rem] text-muted">{cell.brand}</span>
                           )}
                         </td>

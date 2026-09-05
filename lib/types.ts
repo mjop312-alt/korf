@@ -43,8 +43,8 @@ export interface CanonicalProduct {
   variants: StoreProduct[];
 }
 
-/** Merkvoorkeur per lijstregel. */
-export type BrandMode = "any" | "own" | { brand: string };
+/** Merkvoorkeur per lijstregel. "a_brand" = altijd een A-merk (nooit huismerk). */
+export type BrandMode = "any" | "own" | "a_brand" | { brand: string };
 
 export interface ListItem {
   id: string;

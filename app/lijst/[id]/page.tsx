@@ -22,10 +22,13 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
   ]);
 
   const allStoreIds = SUPERMARKETS.map((s) => s.id);
+  const listStores = (list.storeIds as string[] | null)?.filter((s) => allStoreIds.includes(s)) ?? null;
   const prefStores = (pref?.selectedStoreIds as string[] | null) ?? null;
-  const initialStores = prefStores?.length
-    ? prefStores.filter((s) => allStoreIds.includes(s))
-    : allStoreIds;
+  const initialStores = listStores?.length
+    ? listStores
+    : prefStores?.length
+      ? prefStores.filter((s) => allStoreIds.includes(s))
+      : allStoreIds;
 
   return (
     <div className="min-h-screen bg-ground text-text">

@@ -84,6 +84,13 @@ export async function archiveList(listId: string) {
   redirect("/lijsten");
 }
 
+export async function setListStores(listId: string, storeIds: string[]) {
+  const userId = await requireUserId();
+  await assertOwns(userId, listId);
+  await db.shoppingList.update({ where: { id: listId }, data: { storeIds } });
+  revalidatePath(`/lijst/${listId}`);
+}
+
 export async function unarchiveList(listId: string) {
   const userId = await requireUserId();
   await assertOwns(userId, listId);
@@ -159,7 +166,12 @@ export async function addItemBySlug(listId: string, slug: string) {
         categoryId: cp.categoryId,
         quantity: 1,
         unit: cp.baseUnit,
-        brandMode: pref?.defaultBrandMode === "prefer_own" ? "own_brand" : "any",
+        brandMode:
+          pref?.defaultBrandMode === "prefer_own"
+            ? "own_brand"
+            : pref?.defaultBrandMode === "always_a_brand"
+              ? "a_brand"
+              : "any",
         position: (agg._max.position ?? -1) + 1,
       },
     });
@@ -211,6 +223,24 @@ export async function clearChecked(listId: string) {
   await assertOwns(userId, listId);
   await db.shoppingListItem.deleteMany({ where: { listId, checked: true } });
   revalidatePath(`/lijst/${listId}`);
+}
+
+/** Legt een afgeronde boodschappentrip vast voor de besparingsgeschiedenis op het dashboard. */
+export async function recordSavingsSnapshot(
+  listId: string,
+  snapshot: {
+    listName: string;
+    totalCents: number;
+    savingCents: number;
+    referenceLabel: string;
+    storeLabel: string;
+    itemCount: number;
+  },
+) {
+  const userId = await requireUserId();
+  await assertOwns(userId, listId);
+  await db.savingsRecord.create({ data: { userId, ...snapshot } });
+  revalidatePath("/dashboard");
 }
 
 /* ─────────────── delen ─────────────── */

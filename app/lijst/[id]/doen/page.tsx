@@ -83,7 +83,21 @@ export default async function DoenPage({
           {list.name} · {scenario.storeIds.length > 1 ? `${scenario.storeIds.length} winkels` : storeName(scenario.storeIds[0])} · totaal {formatEuro(scenario.totalCents)}
         </p>
 
-        <ShoppingChecklist listId={id} groups={groups} />
+        <ShoppingChecklist
+          listId={id}
+          groups={groups}
+          snapshot={{
+            listName: list.name,
+            totalCents: scenario.totalCents,
+            savingCents: scenario.savingCents,
+            referenceLabel: result.referenceLabel,
+            storeLabel:
+              scenario.storeIds.length > 1
+                ? scenario.storeIds.map(storeName).join(" + ")
+                : storeName(scenario.storeIds[0]),
+            itemCount: items.length,
+          }}
+        />
       </main>
       <SiteFooter />
     </div>

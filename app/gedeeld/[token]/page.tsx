@@ -10,7 +10,13 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Gedeelde lijst — Korf" };
 
 const brandLabel = (mode: string, pinnedBrand?: string | null) =>
-  mode === "any" ? "maakt niet uit" : mode === "own_brand" ? "alleen huismerk" : pinnedBrand ?? "vastgezet merk";
+  mode === "any"
+    ? "maakt niet uit"
+    : mode === "own_brand"
+      ? "alleen huismerk"
+      : mode === "a_brand"
+        ? "altijd A-merk"
+        : (pinnedBrand ?? "vastgezet merk");
 
 export default async function SharedListPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

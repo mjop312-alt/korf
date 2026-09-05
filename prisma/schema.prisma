@@ -37,6 +37,7 @@ model User {
   lists         ShoppingList[]
   priceAlerts   PriceAlert[]
   favorites     FavoriteProduct[]
+  savingsRecords SavingsRecord[]
 }
 
 model Account {
@@ -102,6 +103,7 @@ model ShoppingList {
   name        String
   isActive    Boolean   @default(false)
   templateKey String?
+  storeIds    Json? // string[] — null ⇒ gebruik de algemene winkelvoorkeur
   archivedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -110,6 +112,23 @@ model ShoppingList {
   shares ListShare[]
 
   @@index([ownerId])
+}
+
+/// Eén afgeronde boodschappentrip (alle regels afgevinkt in "boodschappen doen"),
+/// voor de besparingsgeschiedenis op het dashboard.
+model SavingsRecord {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listName       String
+  totalCents     Int
+  savingCents    Int
+  referenceLabel String
+  storeLabel     String
+  itemCount      Int
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model ShoppingListItem {

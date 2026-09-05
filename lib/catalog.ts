@@ -17,11 +17,15 @@ export interface BrandChoiceOption {
 export function availableBrands(
   product: CanonicalProduct,
   storeIds: StoreId[],
-): { brands: string[]; hasOwnBrand: boolean } {
+): { brands: string[]; hasOwnBrand: boolean; hasABrand: boolean } {
   const inScope = product.variants.filter((v) => storeIds.includes(v.store));
   const brands: string[] = [];
   for (const v of inScope) if (!brands.includes(v.brand)) brands.push(v.brand);
-  return { brands, hasOwnBrand: inScope.some((v) => v.ownBrand) };
+  return {
+    brands,
+    hasOwnBrand: inScope.some((v) => v.ownBrand),
+    hasABrand: inScope.some((v) => !v.ownBrand),
+  };
 }
 
 /** Opties voor de BrandChoice-select, gefilterd op de gekozen winkels. */
@@ -29,10 +33,11 @@ export function brandChoiceOptions(
   product: CanonicalProduct,
   storeIds: StoreId[],
 ): BrandChoiceOption[] {
-  const { brands, hasOwnBrand } = availableBrands(product, storeIds);
+  const { brands, hasOwnBrand, hasABrand } = availableBrands(product, storeIds);
   return [
     { value: "any", label: "Merk: maakt niet uit", mode: "any" },
     ...brands.map((b) => ({ value: `brand:${b}`, label: `Merk: ${b}`, mode: { brand: b } as BrandMode })),
+    ...(hasABrand ? [{ value: "a_brand", label: "Altijd A-merk", mode: "a_brand" as BrandMode }] : []),
     ...(hasOwnBrand ? [{ value: "own", label: "Alleen huismerk", mode: "own" as BrandMode }] : []),
   ];
 }
@@ -44,8 +49,9 @@ export function isBrandModeAvailable(
   storeIds: StoreId[],
 ): boolean {
   if (mode === "any") return true;
-  const { brands, hasOwnBrand } = availableBrands(product, storeIds);
+  const { brands, hasOwnBrand, hasABrand } = availableBrands(product, storeIds);
   if (mode === "own") return hasOwnBrand;
+  if (mode === "a_brand") return hasABrand;
   return brands.includes(mode.brand);
 }
 
@@ -54,6 +60,6 @@ export function serialiseBrandMode(mode: BrandMode): string {
 }
 
 export function parseBrandMode(value: string): BrandMode {
-  if (value === "any" || value === "own") return value;
+  if (value === "any" || value === "own" || value === "a_brand") return value;
   return { brand: value.slice("brand:".length) };
 }

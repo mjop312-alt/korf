@@ -28,6 +28,7 @@ export function effectiveCents(v: StoreProduct): number {
 function matchesBrand(item: ListItem, v: StoreProduct): boolean {
   if (item.brandMode === "any") return true;
   if (item.brandMode === "own") return v.ownBrand;
+  if (item.brandMode === "a_brand") return !v.ownBrand;
   return v.brand === item.brandMode.brand;
 }
 
@@ -239,7 +240,15 @@ export function compareList(
     for (const s of storeIds) {
       const c = grid.get(it.id)!.get(s);
       perStore[s] =
-        c ?? { missing: true, reason: it.brandMode === "any" ? "geen treffer" : "niet in dit merk" };
+        c ?? {
+          missing: true,
+          reason:
+            it.brandMode === "any"
+              ? "geen treffer"
+              : it.brandMode === "a_brand"
+                ? "geen A-merk hier"
+                : "niet in dit merk",
+        };
     }
     return {
       itemId: it.id,

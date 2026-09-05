@@ -10,6 +10,7 @@ import { getMyAlerts } from "@/lib/alerts";
 import { addToActiveList } from "@/lib/list-actions";
 import { getLists, getListWithItems, getOrCreateActiveList, getUserId, toEngineItems } from "@/lib/lists";
 import { defaultStoreIds } from "@/lib/preferences";
+import { getLifetimeSavings, getSavingsHistory } from "@/lib/savings";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Dashboard — Korf" };
@@ -20,14 +21,17 @@ export default async function DashboardPage() {
   const userId = await getUserId();
   if (!userId) redirect("/inloggen?callbackUrl=/dashboard");
 
-  const [user, active, lists, favorites, alerts, { catalog, supermarkets }] = await Promise.all([
-    db.user.findUnique({ where: { id: userId }, select: { name: true } }),
-    getOrCreateActiveList(userId),
-    getLists(userId),
-    getFavorites(),
-    getMyAlerts(),
-    getCompareCatalog(),
-  ]);
+  const [user, active, lists, favorites, alerts, { catalog, supermarkets }, savingsHistory, lifetimeSavings] =
+    await Promise.all([
+      db.user.findUnique({ where: { id: userId }, select: { name: true } }),
+      getOrCreateActiveList(userId),
+      getLists(userId),
+      getFavorites(),
+      getMyAlerts(),
+      getCompareCatalog(),
+      getSavingsHistory(userId),
+      getLifetimeSavings(userId),
+    ]);
 
   const withItems = await getListWithItems(userId, active.id);
   const items = withItems ? toEngineItems(withItems.items) : [];
@@ -84,6 +88,45 @@ export default async function DashboardPage() {
             </Link>
           </div>
         )}
+
+        {/* besparingsgeschiedenis */}
+        <section className="mt-10">
+          <div className="flex items-baseline justify-between">
+            <h2 className="font-display text-xl font-light text-ink">Besparingsgeschiedenis</h2>
+            {lifetimeSavings.trips > 0 && (
+              <p className="font-mono text-xs text-muted">
+                totaal bespaard: <span className="text-sage">{formatEuro(lifetimeSavings.savingCents)}</span> over{" "}
+                {lifetimeSavings.trips} {lifetimeSavings.trips === 1 ? "trip" : "trips"}
+              </p>
+            )}
+          </div>
+          {lifetimeSavings.trips === 0 ? (
+            <p className="mt-3 rounded-xl border border-line bg-raised px-4 py-3 text-sm text-muted">
+              Nog geen afgeronde trips. Rond "Boodschappen doen" een keer helemaal af (alles afvinken en
+              weghalen) om je besparing hier per maand te zien.
+            </p>
+          ) : (
+            <div className="mt-3 flex items-end gap-3 rounded-2xl border border-line bg-raised p-4">
+              {(() => {
+                const maxCents = Math.max(1, ...savingsHistory.map((m) => m.savingCents));
+                return savingsHistory.map((m) => (
+                  <div key={m.month} className="flex flex-1 flex-col items-center gap-1.5">
+                    <span className="font-mono text-[0.6rem] text-muted tabular-nums">
+                      {m.savingCents > 0 ? formatEuro(m.savingCents) : "—"}
+                    </span>
+                    <div className="flex h-24 w-full items-end overflow-hidden rounded-md bg-line">
+                      <div
+                        className="w-full rounded-md bg-sage transition-[height]"
+                        style={{ height: `${Math.max(4, (m.savingCents / maxCents) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="font-mono text-[0.6rem] uppercase text-muted">{m.label}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+        </section>
 
         <div className="mt-10 grid gap-8 md:grid-cols-2">
           {/* recente lijsten */}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatEuro } from "@/lib/compare";
-import { clearChecked, updateItem } from "@/lib/list-actions";
+import { clearChecked, recordSavingsSnapshot, updateItem } from "@/lib/list-actions";
 import type { BrandMode } from "@/lib/types";
 import { useActionQueue } from "@/lib/use-action-queue";
 
@@ -21,9 +21,26 @@ interface ChecklistGroup {
   items: ChecklistItem[];
 }
 
-const brandLabel = (m: BrandMode) => (m === "any" ? "" : m === "own" ? "huismerk" : m.brand);
+const brandLabel = (m: BrandMode) => (m === "any" ? "" : m === "own" ? "huismerk" : m === "a_brand" ? "A-merk" : m.brand);
 
-export function ShoppingChecklist({ listId, groups: initial }: { listId: string; groups: ChecklistGroup[] }) {
+interface TripSnapshot {
+  listName: string;
+  totalCents: number;
+  savingCents: number;
+  referenceLabel: string;
+  storeLabel: string;
+  itemCount: number;
+}
+
+export function ShoppingChecklist({
+  listId,
+  groups: initial,
+  snapshot,
+}: {
+  listId: string;
+  groups: ChecklistGroup[];
+  snapshot: TripSnapshot;
+}) {
   const [groups, setGroups] = useState(initial);
   // acties na elkaar sturen (nooit gelijktijdig) — voorkomt dat snel-achter-elkaar
   // aangevinkte regels elkaars server-schrijfactie overschrijven
@@ -48,6 +65,10 @@ export function ShoppingChecklist({ listId, groups: initial }: { listId: string;
   }
 
   function removeChecked() {
+    // alles afgevinkt en tegelijk weggehaald = de hele trip is klaar — voor de besparingsgeschiedenis
+    if (checked === total && total > 0) {
+      enqueue(() => recordSavingsSnapshot(listId, snapshot));
+    }
     setGroups((prev) =>
       prev.map((g) => ({ ...g, items: g.items.filter((i) => !i.checked) })).filter((g) => g.items.length > 0),
     );
