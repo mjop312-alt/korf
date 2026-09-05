@@ -84,6 +84,8 @@ Node 20+ (getest op Node 24).
 | `lib/favorites.ts` | Favoriet-toggle op productpagina, sectie op het dashboard. |
 | `app/api/me/export/route.ts` | Download al je gegevens als JSON (privacy-tab). |
 | `lib/providers/ah.ts` | **Echte Albert Heijn-connector** (token-auth + zoeken + `listAll` met trefwoord-matching). Actief bij `DATA_MODE=live`. |
+| `lib/providers/jumbo.ts` | **Echte Jumbo-connector** — onofficiële GraphQL-zoek-API (`apollographql-client-name`-header vereist, anders 401). Prijzen komen al in centen. |
+| `lib/providers/lidl.ts` | **Echte Lidl-connector** — onofficiële zoek-API (`/q/api/search`). Doorzoekt het hele assortiment; niet-boodschappen (categorie `Non Food` / `Assortiment/...`) worden eruit gefilterd. Geen losse stukprijs in de respons. |
 
 Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/api/compare`, `defaultBrandMode` bepaalt de merkkeuze van nieuwe lijstregels.
 
