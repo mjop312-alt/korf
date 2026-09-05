@@ -102,7 +102,7 @@ export function ListEditor({
   }, [stores]);
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-10">
+    <main id="main-content" className="mx-auto max-w-5xl px-5 py-10">
       <Link href="/lijsten" className="font-mono text-xs text-muted hover:text-ink">← alle lijsten</Link>
 
       <header className="mt-2 mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -115,7 +115,7 @@ export function ListEditor({
                 if (v && v !== list.name) run(() => renameList(list.id, v));
               }}
               aria-label="Lijstnaam"
-              className="border-0 border-b border-transparent bg-transparent font-display text-2xl text-ink outline-none focus:border-line"
+              className="rounded-md border-0 bg-transparent font-display text-2xl text-ink outline-none focus-visible:ring-2 focus-visible:ring-brass"
             />
             {list.isActive ? (
               <span className="rounded-full border border-brass px-2 py-0.5 font-mono text-[0.6rem] uppercase text-brass">

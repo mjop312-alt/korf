@@ -49,7 +49,7 @@ export function GuestListBuilder() {
   };
 
   return (
-    <main className="mx-auto max-w-5xl px-5 py-10">
+    <main id="main-content" className="mx-auto max-w-5xl px-5 py-10">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="font-display text-2xl font-normal text-ink">Je lijst</h1>
         <span className="font-mono text-xs text-muted">

@@ -44,7 +44,7 @@ export default function RegistrerenPage() {
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
-      <main className="mx-auto flex max-w-sm flex-col px-6 py-16">
+      <main id="main-content" className="mx-auto flex max-w-sm flex-col px-6 py-16">
         <h1 className="font-display text-3xl font-light text-ink">Account maken</h1>
         <p className="mt-2 text-sm text-muted">
           Bewaar je besparing.{" "}

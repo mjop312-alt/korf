@@ -71,7 +71,7 @@ export default async function DoenPage({
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
-      <main className="mx-auto max-w-2xl px-6 py-10">
+      <main id="main-content" className="mx-auto max-w-2xl px-6 py-10">
         <Link
           href={`/vergelijk?lijst=${id}&winkels=${storeIds.join(",")}`}
           className="font-mono text-xs text-muted hover:text-ink"

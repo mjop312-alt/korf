@@ -23,7 +23,7 @@ export default function OverPage() {
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
 
-      <main className="mx-auto max-w-5xl px-6 pb-16 pt-10">
+      <main id="main-content" className="mx-auto max-w-5xl px-6 pb-16 pt-10">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">Over Korf</p>
         <h1 className="mt-4 max-w-2xl font-display text-4xl font-light leading-tight tracking-tight text-ink">
           Eén boodschappenlijst, elke supermarktprijs ernaast.

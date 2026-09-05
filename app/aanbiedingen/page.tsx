@@ -43,7 +43,7 @@ export default async function AanbiedingenPage({
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-6 py-10">
+      <main id="main-content" className="mx-auto max-w-5xl px-6 py-10">
         <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Aanbiedingen</p>
         <h1 className="mt-2 font-display text-3xl font-light text-ink">Wat er nu in de actie is</h1>
         <p className="mt-2 text-sm text-muted">Demodata — geen actuele prijzen. {offers.length} aanbiedingen.</p>

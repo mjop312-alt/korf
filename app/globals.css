@@ -16,7 +16,7 @@
   --color-line: #dfd6c1;
   --color-sage: #5f7355;
   --color-sage-wash: #e4e9db;
-  --color-brass: #8a6a3a;
+  --color-brass: #84632f; /* iets donkerder dan het oorspronkelijke #8a6a3a — WCAG AA (4.5:1) op --color-ground */
   --color-brass-wash: #efe6d2;
   --color-clay: #a9512f;
   --color-clay-wash: #f0e0d6;

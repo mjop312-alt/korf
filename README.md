@@ -127,6 +127,19 @@ Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/
 | `lib/rate-limit.ts` | In-memory rate-limiter (geen Redis nodig — prima voor één instantie). Toegepast op `/api/auth/register` (5/uur per ip), inloggen (10/15 min per e-mailadres, in `auth.ts`) en `/api/compare` (60/min per ip). Geeft `429` + `Retry-After` terug. |
 | `instrumentation.ts` / `sentry.server.config.ts` / `sentry.edge.config.ts` / `instrumentation-client.ts` | **Sentry**-integratie (`@sentry/nextjs`), maar **uitgeschakeld zolang `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` leeg zijn** — geen account nodig voor lokale dev. Maak een gratis project op sentry.io en vul de DSN's in `.env` in om crashes daar te zien. `app/global-error.tsx` vangt fouten die de root layout zelf breken. |
 
+## Toegankelijkheid & performance
+
+Een gerichte pas, geen theoretische lijst — elke fix hieronder loste een concreet, gemeten probleem op:
+
+| Probleem | Fix |
+| --- | --- |
+| `--color-brass` op licht (`#8a6a3a`) haalde 4.44:1 contrast tegen `--color-ground` — net onder de WCAG AA-eis van 4.5:1 voor tekst (brass wordt overal als linkkleur gebruikt). | Iets donkerder gezet (`#84632f`, 4.90:1). Nauwelijks zichtbaar verschil, wel binnen de norm. |
+| De lijstnaam-rename-input (`/lijst/[id]`) had `outline-none` zonder vervangende ring — het enige focus-signaal was een `border-line`-randje met 1.28:1 contrast (WCAG eist 3:1 voor UI-componenten). Onzichtbaar voor toetsenbordgebruikers. | Zelfde `focus-visible:ring-2 focus-visible:ring-brass`-patroon als elk ander invoerveld op de site. |
+| Homepage sloeg een koptekst-niveau over (`h1` → `h3` in de vertrouwensrij, vóór de eerste `h2`). | De drie kaartjes zijn nu `h2` — geen sprong meer in de documentstructuur. |
+| Geen "naar de inhoud"-link — toetsenbord-/schermlezergebruikers moeten op elke pagina eerst door de hele header-navigatie tabben. | Skip-link toegevoegd in `app/layout.tsx` (zichtbaar bij focus), elke pagina's `<main>` kreeg `id="main-content"` (19 bestanden). |
+| `ShareListDialog`'s "Deel"-knop opent een paneel zonder dat een schermlezer weet dat het een uitklapbaar element is. | `aria-haspopup`/`aria-expanded` op de knop, `role="region"` + `aria-label` op het paneel. |
+| Performance-doorloop: `force-dynamic` op 11 pagina's gecontroleerd — allemaal terecht (auth-gebonden of prijzen die vers moeten zijn; statisch maken zou persoonlijke data tussen gebruikers laten lekken). Client/server-componentsplitsing nagelopen — 13 client-components, allemaal aantoonbaar interactief. Geen losse `<img>`-tags die `next/image` omzeilen. | Geen wijziging nodig — bevestigd, niet aangenomen. |
+
 ## Wat zit erin
 
 | Pad | Wat |

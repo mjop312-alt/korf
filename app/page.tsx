@@ -97,7 +97,7 @@ export default function Home() {
             ["Onafhankelijk overzicht", "Geen supermarkt betaalt voor een betere plek. De rangschikking volgt de prijs."],
           ].map(([t, d]) => (
             <div key={t} className="bg-raised px-6 py-8">
-              <h3 className="font-display text-lg text-ink">{t}</h3>
+              <h2 className="font-display text-lg text-ink">{t}</h2>
               <p className="mt-2 text-sm text-muted">{d}</p>
             </div>
           ))}

@@ -51,7 +51,7 @@ export default async function InstellingenPage({
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
-      <main className="mx-auto max-w-3xl px-6 py-10">
+      <main id="main-content" className="mx-auto max-w-3xl px-6 py-10">
         <h1 className="font-display text-3xl font-light text-ink">Instellingen</h1>
 
         <nav className="mt-6 flex flex-wrap gap-1.5">

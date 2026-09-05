@@ -28,7 +28,7 @@ export default async function SharedListPage({ params }: { params: Promise<{ tok
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
-      <main className="mx-auto max-w-2xl px-6 py-10">
+      <main id="main-content" className="mx-auto max-w-2xl px-6 py-10">
         <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">
           Gedeeld door {share.list.owner.name ?? "een Korf-gebruiker"}
         </p>

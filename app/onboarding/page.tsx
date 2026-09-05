@@ -25,7 +25,7 @@ export default async function OnboardingPage() {
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
-      <main className="mx-auto max-w-lg px-6 py-12">
+      <main id="main-content" className="mx-auto max-w-lg px-6 py-12">
         <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Even instellen</p>
         <h1 className="mt-3 font-display text-3xl font-light text-ink">Welke winkels doen mee?</h1>
         <p className="mt-2 text-sm text-muted">

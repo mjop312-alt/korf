@@ -24,13 +24,19 @@ export function ShareListDialog({ listId }: { listId: string }) {
           setOpen((o) => !o);
           setUrl(null);
         }}
+        aria-haspopup="true"
+        aria-expanded={open}
         className="rounded-xl border border-line px-3 py-2 text-sm text-ink hover:bg-ground"
       >
         Deel
       </button>
 
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-line bg-raised p-4 shadow-xl">
+        <div
+          role="region"
+          aria-label="Lijst delen"
+          className="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-line bg-raised p-4 shadow-xl"
+        >
           {!url ? (
             <>
               <p className="font-mono text-[0.62rem] uppercase tracking-wider text-muted">Hoe delen?</p>

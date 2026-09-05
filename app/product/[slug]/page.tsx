@@ -58,7 +58,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
       <SiteHeader />
-      <main className="mx-auto max-w-4xl px-6 py-10">
+      <main id="main-content" className="mx-auto max-w-4xl px-6 py-10">
         <Link href={`/aanbiedingen?categorie=${product.categorySlug}`} className="font-mono text-xs text-muted hover:text-ink">
           ← {product.category}
         </Link>
