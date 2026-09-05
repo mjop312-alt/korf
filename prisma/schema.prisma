@@ -1,0 +1,308 @@
+// Korf — databaseschema.
+//
+// LOKAAL draait dit op SQLite (file:./dev.db) zodat het meteen werkt zonder
+// externe dienst. Het schema is bewust PORTABEL geschreven:
+//   - geen Prisma-enums  → String met toegestane waarden in commentaar (validatie in Zod)
+//   - cuid()- id's i.p.v. uuid
+//   - Json voor flexibele velden (werkt op SQLite én Postgres)
+//   - bedragen in hele centen (Int)
+//
+// PRODUCTIE (Postgres): zet `provider = "postgresql"` hieronder, zet DATABASE_URL
+// op een Neon/Supabase-connectiestring, en gebruik `prisma migrate deploy`
+// i.p.v. `prisma db push`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// ─────────────────────────── Auth.js ───────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique // altijd lowercase opslaan
+  passwordHash  String? // null bij OAuth / magic link
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+
+  accounts      Account[]
+  sessions      Session[]
+  preference    UserPreference?
+  lists         ShoppingList[]
+  priceAlerts   PriceAlert[]
+  favorites     FavoriteProduct[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+/// ─────────────────────────── Voorkeuren ───────────────────────────
+
+model UserPreference {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  postcode                    String?
+  radiusKm                    Int     @default(5) // 2 | 5 | 10
+  selectedStoreIds            Json? // string[] — null ⇒ alle winkels in de straal
+  defaultBrandMode            String  @default("any") // any | prefer_own | always_a_brand
+  fulfilment                  String  @default("pickup") // pickup | delivery
+  travelCostPerKmCents        Int     @default(0)
+  minExtraStoreSavingCents    Int     @default(200)
+  budgetCents                 Int?
+  notify                      Json? // { priceAlerts, weeklySummary, favouriteOffers } — null ⇒ alles aan
+
+  updatedAt DateTime @updatedAt
+}
+
+/// ─────────────────────────── Lijsten ───────────────────────────
+
+model ShoppingList {
+  id          String    @id @default(cuid())
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  isActive    Boolean   @default(false)
+  templateKey String?
+  archivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  items  ShoppingListItem[]
+  shares ListShare[]
+
+  @@index([ownerId])
+}
+
+model ShoppingListItem {
+  id                  String   @id @default(cuid())
+  listId              String
+  list                ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  rawText             String
+  canonicalProductId  String?
+  canonicalProduct    CanonicalProduct? @relation(fields: [canonicalProductId], references: [id])
+  categoryId          String?
+  category            Category? @relation(fields: [categoryId], references: [id])
+  quantity            Float    @default(1)
+  unit                String   @default("piece") // piece | kg | litre | pack
+  brandMode           String   @default("any") // any | pinned_brand | own_brand
+  pinnedBrandId       String?
+  pinnedBrand         Brand?   @relation(fields: [pinnedBrandId], references: [id])
+  pinnedStoreProducts Json? // { [supermarketId]: storeProductId } — null ⇒ geen handmatige pins
+  checked             Boolean  @default(false)
+  position            Int      @default(0)
+
+  @@index([listId])
+}
+
+model ListShare {
+  id        String    @id @default(cuid())
+  listId    String
+  list      ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  mode      String    @default("read") // read | copy
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+/// ─────────────────────────── Catalogus ───────────────────────────
+
+model Category {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  name     String
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+
+  canonicalProducts CanonicalProduct[]
+  listItems         ShoppingListItem[]
+}
+
+model Brand {
+  id                 String  @id @default(cuid())
+  name               String  @unique
+  isOwnBrand         Boolean @default(false)
+  ownerSupermarketId String?
+  ownerSupermarket   Supermarket? @relation(fields: [ownerSupermarketId], references: [id])
+
+  storeProducts     StoreProduct[]
+  typicalForProducts CanonicalProduct[]
+  pinnedByListItems ShoppingListItem[]
+}
+
+model CanonicalProduct {
+  id             String  @id @default(cuid())
+  slug           String  @unique
+  name           String
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id])
+  typicalBrandId String?
+  typicalBrand   Brand?  @relation(fields: [typicalBrandId], references: [id])
+  baseUnit       String  // kg | litre | piece
+  baseSize       Float   @default(1)
+  imageUrl       String?
+
+  storeProducts StoreProduct[]
+  listItems     ShoppingListItem[]
+  priceAlerts   PriceAlert[]
+  favorites     FavoriteProduct[]
+}
+
+model Supermarket {
+  id                 String  @id @default(cuid())
+  slug               String  @unique
+  name               String
+  short              String
+  brandColor         String
+  hasOnlineCatalogue Boolean @default(true)
+  dataProvider       String  @default("mock") // mock | ah | jumbo | lidl | manual
+
+  storeProducts  StoreProduct[]
+  locations      StoreLocation[]
+  promotions     Promotion[]
+  ownBrands      Brand[]
+}
+
+model StoreLocation {
+  id            String  @id @default(cuid())
+  supermarketId String
+  supermarket   Supermarket @relation(fields: [supermarketId], references: [id], onDelete: Cascade)
+  address       String
+  postcode      String
+  city          String
+  lat           Float
+  lng           Float
+  services      Json? // { pickup, delivery, openingHours } — null ⇒ ophalen alleen
+
+  @@index([supermarketId])
+}
+
+model StoreProduct {
+  id                 String  @id @default(cuid())
+  supermarketId      String
+  supermarket        Supermarket @relation(fields: [supermarketId], references: [id], onDelete: Cascade)
+  canonicalProductId String?
+  canonicalProduct   CanonicalProduct? @relation(fields: [canonicalProductId], references: [id])
+  brandId            String
+  brand              Brand   @relation(fields: [brandId], references: [id])
+  title              String
+  ean                String?
+  packSize           Float?
+  packUnit           String? // piece | kg | litre | pack
+  externalId         String?
+  externalUrl        String?
+  imageUrl           String?
+  available          Boolean @default(true)
+
+  price        Price?
+  priceHistory PriceHistory[]
+
+  @@index([supermarketId])
+  @@index([canonicalProductId])
+}
+
+/// ─────────────────────────── Prijzen ───────────────────────────
+
+model Price {
+  storeProductId String   @id
+  storeProduct   StoreProduct @relation(fields: [storeProductId], references: [id], onDelete: Cascade)
+  priceCents     Int
+  unitPriceCents Int?
+  isPromo        Boolean  @default(false)
+  promoPriceCents Int?
+  promotionId    String?
+  promotion      Promotion? @relation(fields: [promotionId], references: [id])
+  source         String   @default("mock") // mock | official_api | partner_feed | manual
+  collectedAt    DateTime @default(now())
+}
+
+model PriceHistory {
+  id             String   @id @default(cuid())
+  storeProductId String
+  storeProduct   StoreProduct @relation(fields: [storeProductId], references: [id], onDelete: Cascade)
+  priceCents     Int
+  promoPriceCents Int?
+  observedAt     DateTime @default(now())
+
+  @@index([storeProductId, observedAt])
+}
+
+model Promotion {
+  id            String   @id @default(cuid())
+  supermarketId String
+  supermarket   Supermarket @relation(fields: [supermarketId], references: [id], onDelete: Cascade)
+  mechanism     String   // price_off | pct_off | x_for_y | second_half | cashback
+  label         String
+  value         Json? // mechanisme-parameters
+  startsAt      DateTime
+  endsAt        DateTime
+  autoApplied   Boolean  @default(false)
+
+  prices Price[]
+}
+
+/// ─────────────────────────── Gebruiker × product ───────────────────────────
+
+model PriceAlert {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  canonicalProductId String
+  canonicalProduct   CanonicalProduct @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
+  thresholdCents     Int
+  storeScope         Json? // string[] — null/leeg ⇒ alle winkels
+  lastTriggeredAt    DateTime?
+  createdAt          DateTime @default(now())
+
+  @@index([userId])
+}
+
+model FavoriteProduct {
+  userId             String
+  canonicalProductId String
+  createdAt          DateTime @default(now())
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  canonicalProduct CanonicalProduct @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
+
+  @@id([userId, canonicalProductId])
+}

@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* Korf — design-tokens (fase 1). Tailwind v4 @theme: elke token wordt een utility,
+   bv. bg-ground, text-ink, border-line, text-sage. */
+@theme {
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --color-ground: #f6f1e6;
+  --color-sunken: #efe8d8;
+  --color-raised: #fcfaf3;
+  --color-ink: #17202b;
+  --color-text: #33322d;
+  --color-muted: #6e6858;
+  --color-line: #dfd6c1;
+  --color-sage: #5f7355;
+  --color-sage-wash: #e4e9db;
+  --color-brass: #8a6a3a;
+  --color-brass-wash: #efe6d2;
+  --color-clay: #a9512f;
+  --color-clay-wash: #f0e0d6;
+
+  --color-ah: #0a7db8;
+  --color-jumbo: #c9770a;
+  --color-lidl: #1c4e9c;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-ground: #14171c;
+    --color-sunken: #0f1216;
+    --color-raised: #1b1f25;
+    --color-ink: #f2ede0;
+    --color-text: #d7d2c4;
+    --color-muted: #928b7a;
+    --color-line: #2c313a;
+    --color-sage: #9db08c;
+    --color-sage-wash: #1b2620;
+    --color-brass: #c7a468;
+    --color-brass-wash: #241f16;
+    --color-clay: #cf8161;
+    --color-clay-wash: #2b1c15;
+  }
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
