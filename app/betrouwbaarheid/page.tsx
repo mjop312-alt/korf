@@ -12,12 +12,15 @@ export const metadata: Metadata = {
     "Waar Korf zijn prijzen vandaan haalt, hoe actueel ze zijn, wat wel en niet is meegerekend, en hoe de besparing wordt berekend.",
 };
 
-// In productie komt dit uit de provider-registry / database (source + collected_at
-// per prijs). Nu staat alles op demodata.
+// Weerspiegelt DATA_MODE (zie lib/providers/index.ts) — "live" betekent dat de
+// ingestion-worker (npm run ingest) écht bij AH/Jumbo/Lidl heeft opgehaald.
+const isLive = process.env.DATA_MODE === "live";
 const DATA_STATUS = SUPERMARKETS.map((s) => ({
   name: s.name,
-  mode: "demo" as "demo" | "live",
-  note: "voorbeeldprijzen, niet actueel",
+  mode: (isLive ? "live" : "demo") as "demo" | "live",
+  note: isLive
+    ? "onofficiële zoek-API, periodiek opgehaald — geen bonuskaart-/winkelspecifieke prijzen"
+    : "voorbeeldprijzen, niet actueel",
 }));
 
 function Row({ q, a }: { q: string; a: React.ReactNode }) {
@@ -48,9 +51,19 @@ export default function BetrouwbaarheidPage() {
         <div className="mt-10 rounded-2xl border border-brass bg-brass-wash p-5">
           <p className="font-mono text-xs uppercase tracking-widest text-brass">Huidige status</p>
           <p className="mt-2 text-sm text-text">
-            Deze versie draait volledig op <strong>demodata</strong>. De prijzen zijn realistisch
-            gekozen, maar <strong>niet actueel</strong> en niet van een supermarkt afkomstig. Zodra
-            een echte databron is aangesloten, verdwijnt deze melding voor die winkel.
+            {isLive ? (
+              <>
+                Deze versie haalt <strong>echte prijzen</strong> op bij Albert Heijn, Jumbo en Lidl via
+                hun (onofficiële) zoek-API's. Geen bonuskaart- of winkelspecifieke kortingen, en
+                matching gebeurt op trefwoord — af en toe kan dat een net iets andere variant treffen.
+              </>
+            ) : (
+              <>
+                Deze versie draait volledig op <strong>demodata</strong>. De prijzen zijn realistisch
+                gekozen, maar <strong>niet actueel</strong> en niet van een supermarkt afkomstig. Zodra
+                een echte databron is aangesloten, verdwijnt deze melding voor die winkel.
+              </>
+            )}
           </p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full border-collapse text-sm">
@@ -66,7 +79,11 @@ export default function BetrouwbaarheidPage() {
                   <tr key={d.name} className="border-t border-brass/30">
                     <td className="py-2 pr-4 text-ink">{d.name}</td>
                     <td className="py-2 pr-4">
-                      <span className="rounded-full border border-brass px-2 py-0.5 font-mono text-[0.6rem] uppercase text-brass">
+                      <span
+                        className={`rounded-full border px-2 py-0.5 font-mono text-[0.6rem] uppercase ${
+                          d.mode === "demo" ? "border-brass text-brass" : "border-sage text-sage"
+                        }`}
+                      >
                         {d.mode === "demo" ? "Demodata" : "Live"}
                       </span>
                     </td>

@@ -5,8 +5,10 @@ Dit is de **kern uit fase 4**: de geverifieerde scenario-engine, mockdata, een A
 en twee werkende schermen. Het merkconcept, de blauwdruk en de architectuur staan in de
 bijbehorende documenten (fase 1–3).
 
-> **Alle prijzen zijn demodata.** Geen actuele data. In productie vult de ingestion-worker
-> PostgreSQL met prijzen uit officiële bronnen, elk met een `collected_at`.
+> **`DATA_MODE=live`**: deze lokale instantie haalt echte prijzen op bij Albert Heijn, Jumbo en
+> Lidl (onofficiële zoek-API's, zie `lib/providers/`). Zet terug op `mock` in `.env` voor
+> stabiele demodata. In productie vult de ingestion-worker PostgreSQL, elke prijs met een
+> `collected_at`.
 
 ## Draaien
 
