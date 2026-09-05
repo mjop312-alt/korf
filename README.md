@@ -120,6 +120,13 @@ Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/
 | `app/sitemap.ts` / `app/robots.ts` | Next's ingebouwde `sitemap.xml`/`robots.txt`-generators. Sitemap bevat de statische marketingpagina's + alle 65 canonieke producten (`/product/[slug]`); robots sluit de ingelogde schermen uit. Zet `NEXT_PUBLIC_SITE_URL` in productie op het echte domein. |
 | `app/product/[slug]/page.tsx` | JSON-LD (`schema.org/Product` + `Offer` per winkel) toegevoegd voor rijke zoekresultaten. |
 
+## Rate-limiting & error-monitoring
+
+| Pad | Wat |
+| --- | --- |
+| `lib/rate-limit.ts` | In-memory rate-limiter (geen Redis nodig — prima voor één instantie). Toegepast op `/api/auth/register` (5/uur per ip), inloggen (10/15 min per e-mailadres, in `auth.ts`) en `/api/compare` (60/min per ip). Geeft `429` + `Retry-After` terug. |
+| `instrumentation.ts` / `sentry.server.config.ts` / `sentry.edge.config.ts` / `instrumentation-client.ts` | **Sentry**-integratie (`@sentry/nextjs`), maar **uitgeschakeld zolang `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` leeg zijn** — geen account nodig voor lokale dev. Maak een gratis project op sentry.io en vul de DSN's in `.env` in om crashes daar te zien. `app/global-error.tsx` vangt fouten die de root layout zelf breken. |
+
 ## Wat zit erin
 
 | Pad | Wat |

@@ -9,6 +9,7 @@ import { getCompareCatalog } from "@/lib/catalog-db";
 import { compareList } from "@/lib/compare";
 import { db } from "@/lib/db";
 import { getUserId } from "@/lib/lists";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { ListItem, StoreId } from "@/lib/types";
 
 interface Body {
@@ -33,6 +34,14 @@ function validate(body: unknown): body is Body {
 }
 
 export async function POST(request: Request) {
+  const rate = checkRateLimit(`compare:${getClientIp(request)}`, 60, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { error: "Te veel verzoeken. Probeer het over een paar seconden opnieuw." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

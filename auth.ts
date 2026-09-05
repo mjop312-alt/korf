@@ -7,6 +7,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { loginSchema } from "@/lib/validation";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -20,6 +21,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = loginSchema.safeParse(raw);
         if (!parsed.success) return null;
         const { email, password } = parsed.data;
+
+        // rem brute-force tegen één account af — niet ip-gebonden, dat is met een JSON-body
+        // op /api/auth/callback/credentials niet betrouwbaar uit te lezen op dit punt
+        const rate = checkRateLimit(`login:${email}`, 10, 15 * 60_000);
+        if (!rate.allowed) return null;
 
         const user = await db.user.findUnique({ where: { email } });
         if (!user?.passwordHash) return null;

@@ -18,3 +18,7 @@ tsconfig.tsbuildinfo
 # misc
 .DS_Store
 *.log
+
+# sentry
+.env.sentry-build-plugin
+.sentryclirc
