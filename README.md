@@ -37,7 +37,8 @@ lokaal bestand — geen bevestigingsvraag.
 | `npm run db:reset` | schema opnieuw + opnieuw seeden (wist alles) |
 | `npm run db:studio` | Prisma Studio — de database bekijken |
 | `npm run ingest` | ingestion-worker: providers → database (mock, of AH/Jumbo/Lidl bij `DATA_MODE=live`) |
-| `npm run check-alerts` | alert-trigger-job: checkt prijsalerts tegen actuele prijzen, logt treffers (nog geen e-mail — zie hieronder) |
+| `npm run check-alerts` | alert-trigger-job: prijsalerts tegen actuele prijzen, mailt de treffers (cron: elk uur) |
+| `npm run weekly-summary` | wekelijkse besparingssamenvatting per e-mail (cron: 1×/week) |
 
 ## Fundering (M0)
 
@@ -115,7 +116,9 @@ Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/
 | `prisma/schema.prisma` (`ShoppingList.storeIds`) + `lib/list-actions.ts` (`setListStores`) | **Winkelselectie per lijst** — elke lijst onthoudt nu zijn eigen winkelselectie (was een algemene voorkeur die bij elke lijst opnieuw gold). Valt terug op de algemene voorkeur als een lijst nog niets heeft opgeslagen. |
 | `lib/types.ts` (`BrandMode`), `lib/compare.ts`, `lib/catalog.ts` | **"Altijd A-merk"** is nu een echte merkkeuze (`a_brand`) naast "maakt niet uit" / vastgezet merk / "alleen huismerk" — kiest de goedkoopste niet-huismerk-variant, telt als ontbrekend als een winkel alleen een huismerk voert. De instelling "Altijd A-merk" onder Voorkeuren zet 'm nu ook echt als default voor nieuwe lijstregels. |
 | `prisma/schema.prisma` (`SavingsRecord`) + `lib/savings.ts` | **Besparingsgeschiedenis** — een afgeronde boodschappentrip ("boodschappen doen": alles afvinken én "afgevinkte producten weghalen") legt een snapshot vast (bedrag, besparing, winkel(s)). Dashboard toont nu een balkjesgrafiek per maand + een lifetime-totaal, naast de bestaande "potentiële besparing op je huidige lijst". |
-| `scripts/check-alerts.ts` | **Alert-trigger-job** — vergelijkt elke opgeslagen prijsalert met de actuele laagste prijs, logt treffers en zet `lastTriggeredAt` (niet vaker dan 1x/24u per alert). **Verstuurt nog geen echte melding** — er is nog geen e-mailprovider aangesloten; zodra die er is, vervangt een verzendstap de `console.log` in dit script. Draai dit periodiek via cron. |
+| `scripts/check-alerts.ts` | **Alert-trigger-job** — vergelijkt elke prijsalert met de actuele laagste prijs, mailt de treffers (respecteert `notify.priceAlerts`), zet `lastTriggeredAt` (niet vaker dan 1×/24u per alert). Cron: elk uur. |
+| `scripts/weekly-summary.ts` | **Wekelijkse besparingssamenvatting** — mailt elke gebruiker die afgelopen 7 dagen ≥ 1 boodschappentrip afrondde (respecteert `notify.weeklySummary`): bespaard deze week / deze maand / sinds het begin. Cron: 1×/week. Geen trip = geen mail. |
+| `lib/email.ts` + `lib/email-templates.ts` | E-mailverzending via de **Resend** REST-API (geen SDK). **No-op zonder `RESEND_API_KEY`** — de scripts loggen dan alleen wat ze zouden sturen (dry-run), net als de Sentry-setup. Aanzetten: account op resend.com → API-key + `EMAIL_FROM` in `.env`. |
 
 ## Legal & SEO
 
