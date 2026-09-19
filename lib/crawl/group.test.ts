@@ -115,3 +115,32 @@ describe("categoryFor", () => {
     expect(categoryFor(null, "ROBIJN Quickwash")).toBe("overig");
   });
 });
+
+describe("groupFor — merk telt mee bij wijn en bier", () => {
+  it("wijnen van verschillende producenten zijn verschillende groepen", () => {
+    const alamos = p("Alamos Chardonnay", "Alamos", false, "750 ml", "Bier, wijn, aperitieven");
+    const crimes = p("19 Crimes Chardonnay", "19 Crimes", false, "750 ml", "Bier, wijn, aperitieven");
+    expect(key(alamos)).not.toBe(key(crimes));
+  });
+
+  it("dezelfde wijn in twee winkels (ook als de categorie anders heet) is één groep", () => {
+    const ah = p("Alamos Chardonnay", "Alamos", false, "750 ml", "Bier, wijn, aperitieven");
+    const jumbo = p("Alamos Chardonnay 75 cl", "Alamos", false, "75 cl", "Bier en wijn");
+    expect(key(ah)).toBe(key(jumbo));
+  });
+
+  it("speciaalbier per merk, maar huismerk-wijn blijft over winkels heen matchen", () => {
+    const affligem = p("Affligem Blond", "Affligem", false, "330 ml", "Bier, wijn, aperitieven");
+    const leffe = p("Leffe Blond", "Leffe", false, "330 ml", "Bier, wijn, aperitieven");
+    expect(key(affligem)).not.toBe(key(leffe));
+    const ahWijn = p("AH Chardonnay", "AH", true, "750 ml", "Bier, wijn, aperitieven");
+    const jumboWijn = p("Jumbo Chardonnay 75 cl", "Jumbo", true, "75 cl", "Bier en wijn");
+    expect(key(ahWijn)).toBe(key(jumboWijn));
+  });
+
+  it("buiten drank blijft het merk uit de sleutel (halfvolle melk van elk merk)", () => {
+    const campina = p("Campina Halfvolle melk", "Campina", false, "1 l", "Zuivel, eieren");
+    const fr = p("Friesche Vlag Halfvolle melk", "Friesche Vlag", false, "1 l", "Zuivel, boter en eieren");
+    expect(key(campina)).toBe(key(fr));
+  });
+});

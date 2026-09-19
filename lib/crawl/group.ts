@@ -54,6 +54,11 @@ export function categoryFor(categoryTop: string | null, title: string): string {
   return (CATEGORIES.find((c) => c.test.test(hay)) ?? CATEGORIES[CATEGORIES.length - 1]).slug;
 }
 
+// Bij wijn, bier en sterke drank IS het merk (de producent) het product: "Alamos Chardonnay" en
+// "19 Crimes Chardonnay" zijn andere wijnen. Daar blijft het merk in de groepssleutel; voor
+// melk, pasta en dergelijke is het juist andersom (elk merk is "gewoon halfvolle melk").
+const BRAND_MATTERS = /wijn|bier|sterke drank|gedistilleerd|likeur|whisk|jenever|aperitief|spirit/;
+
 const STORE_PREFIX = new Set(["ah", "albert", "heijn", "jumbo", "jumbos", "lidl", "plus", "aldi"]);
 const UNIT_WORDS = new Set(["g", "gr", "gram", "kg", "l", "ltr", "liter", "litre", "cl", "ml", "st", "stuks", "stuk", "x"]);
 // verpakkingswoorden die niets zeggen over het product zelf
@@ -120,7 +125,8 @@ export function groupFor(p: GroupInput): GroupInfo {
   const all = tokens(p.title);
   // A-merk: het merk uit de titel halen. Huismerk: alleen "AH"/"Jumbo"/"Lidl" — sub-lijnen
   // als Biologisch, Excellent en Terra zijn écht een ander product.
-  const withoutBrand = all.filter((t) => (p.ownBrand ? !STORE_PREFIX.has(t) : !brandTokens.has(t)));
+  const keepBrand = !p.ownBrand && BRAND_MATTERS.test(fold(p.categoryTop ?? ""));
+  const withoutBrand = keepBrand ? all : all.filter((t) => (p.ownBrand ? !STORE_PREFIX.has(t) : !brandTokens.has(t)));
   let core = withoutBrand.filter((t) => !isSizeToken(t) && !NOISE.has(t) && t.length > 1);
   // titel == merk ("COCA-COLA"): dan is het merk zelf de enige naam die we hebben
   if (!core.length) core = all.filter((t) => !isSizeToken(t) && !NOISE.has(t) && t.length > 1);
