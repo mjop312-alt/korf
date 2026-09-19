@@ -145,6 +145,8 @@ Korf haalt het **hele assortiment** van de supermarkten binnen (alle merken en h
 
 **Ritme.** Geen enkele winkel heeft een "alleen aanbiedingen"-route (getest), dus elke verversing is een volledige scan van die winkel. Standaard: **AH elke 15 min, Jumbo elke 30, PLUS elke 30, Lidl en Aldi elke 60** (`CRAWL_INTERVAL_<WINKEL>_MIN` in `.env`). Een ronde kost AH ≈ 350 verzoeken (~2–3 min), Jumbo ≈ 1.000 (~4 min), Lidl ≈ 95 trage verzoeken (~4 min). Elke 5 minuten kan, maar is op onofficiële API's vragen om een blokkade — en prijzen veranderen hooguit een paar keer per dag (nieuwe acties meestal maandag).
 
+**Lijstproducten elke 5 minuten.** Naast de volledige rondes ververst de worker de producten uit lijsten, favorieten en prijsalerts apart (`lib/crawl/hot.ts`, `npm run hot`): per productgroep en winkel de 3 goedkoopste varianten, één gerichte zoekopdracht per product. Getest: AH en Jumbo vinden ~97% terug (120–270 ms per product), Lidl maar ~50% en traag — daar geldt alleen de volledige ronde; Aldi (2 min) en PLUS hebben geen zoekroute en blijven op de volledige ronde (Aldi 15 min, PLUS 30). Interval: `CRAWL_HOT_INTERVAL_MIN` (standaard 5).
+
 **Draaien.** De worker is een gewoon Node-proces: laat 'm draaien in een terminal, of start 'm bij het inloggen via Windows Taakplanner (`npm run worker`, werkmap = projectmap). Elke schrijfactie houdt de Neon-database wakker; een 24/7-worker past waarschijnlijk niet in het gratis Neon-plan.
 
 ## Legal & SEO

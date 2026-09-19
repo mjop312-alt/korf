@@ -158,6 +158,12 @@ async function* crawlTaxonomy(
 
 export const ahCrawler: Crawler = {
   store: "ah",
+  async lookup(item) {
+    const url = `${SEARCH_URL}?query=${encodeURIComponent(item.title)}&size=30`;
+    const res = await fetchJson<AHSearch>(url, { headers: await ahHeaders() }, { label: "AH zoeken", retries: 2 });
+    const hit = res.products?.find((p) => String(p.webshopId) === item.externalId);
+    return hit ? map(hit, item.categoryTop ?? "") : null;
+  },
   async *crawlAll(opts: CrawlOptions = {}) {
     const log = opts.log ?? (() => {});
     const categories = await fetchJson<AHCategory[]>(CATEGORIES_URL, { headers: await ahHeaders() }, { label: "AH categorieën" });

@@ -131,6 +131,20 @@ async function rootCategories(): Promise<{ id: string; name: string }[]> {
 
 export const jumboCrawler: Crawler = {
   store: "jumbo",
+  async lookup(item) {
+    const input = {
+      searchType: "keyword",
+      searchTerms: item.title,
+      friendlyUrl: "",
+      offSet: 0,
+      currentUrl: "",
+      previousUrl: "",
+      bloomreachCookieId: "",
+    };
+    const res = await gql<{ searchProducts: { products: JumboProduct[] } }>(SEARCH_QUERY, { input }, "Jumbo zoeken");
+    const hit = res.searchProducts.products.find((p) => p.id === item.externalId);
+    return hit ? map(hit) : null;
+  },
   async *crawlAll(opts: CrawlOptions = {}) {
     const log = opts.log ?? (() => {});
     const roots = await rootCategories();

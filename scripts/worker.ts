@@ -7,15 +7,20 @@
 //   npm run worker -- --verbose             ook per-categorie-voortgang tonen
 //
 // Ritme (minuten tussen twee rondes, instelbaar in .env):
-//   CRAWL_INTERVAL_AH_MIN=15   CRAWL_INTERVAL_JUMBO_MIN=30   CRAWL_INTERVAL_LIDL_MIN=60   CRAWL_INTERVAL_ALDI_MIN=60   CRAWL_INTERVAL_PLUS_MIN=30
+//   CRAWL_INTERVAL_AH_MIN=15   CRAWL_INTERVAL_JUMBO_MIN=30   CRAWL_INTERVAL_LIDL_MIN=60   CRAWL_INTERVAL_ALDI_MIN=60   CRAWL_INTERVAL_PLUS_MIN=30   CRAWL_HOT_INTERVAL_MIN=5 (lijstproducten)
 //
 // Waarom geen 5 minuten voor alles? Geen enkele winkel heeft een "alleen aanbiedingen"-route
 // (getest), dus elke verversing is een volledige ronde: AH ≈ 350 verzoeken (~2–3 min), Jumbo
 // ≈ 1.000 (~4 min), Lidl ≈ 95 langzame verzoeken (~4 min). Continu opnieuw scannen op een
 // onofficiële API werkt blokkades in de hand; prijzen veranderen bovendien hooguit een paar
 // keer per dag. Wil je toch sneller, zet het interval lager — op eigen risico.
+//
+// Wat wél elke 5 minuten kan: de producten die in lijsten, favorieten of alerts staan (AH en
+// Jumbo, via een gerichte zoekopdracht per product; zie lib/crawl/hot.ts). Dat is het deel dat
+// gebruikers écht zien, en het kost maar een paar tot honderden verzoeken per ronde.
 
 import { PrismaClient } from "@prisma/client";
+import { HOT_STORES, refreshHot } from "../lib/crawl/hot";
 import { crawlStore, STORES, type RunResult } from "../lib/crawl/run";
 import type { StoreSlug } from "../lib/crawl/types";
 import { sleep } from "../lib/crawl/util";
@@ -32,7 +37,9 @@ const verbose = args.verbose === "true";
 const limit = args.limit ? parseInt(args.limit, 10) : undefined;
 const wanted = (args.stores ?? "all") === "all" ? STORES : (args.stores.split(",") as StoreSlug[]);
 
-const DEFAULT_MIN: Record<StoreSlug, number> = { ah: 15, jumbo: 30, lidl: 60, aldi: 60, plus: 30 };
+const DEFAULT_MIN: Record<StoreSlug, number> = { ah: 15, jumbo: 30, lidl: 60, aldi: 15, plus: 30 };
+// Producten op lijsten/favorieten/alerts worden vaker ververst dan het volledige assortiment
+const hotEveryMs = (parseInt(process.env.CRAWL_HOT_INTERVAL_MIN ?? "", 10) || 5) * 60_000;
 const intervalMs = (slug: StoreSlug) => {
   const v = parseInt(process.env[`CRAWL_INTERVAL_${slug.toUpperCase()}_MIN`] ?? "", 10);
   return (Number.isFinite(v) && v > 0 ? v : DEFAULT_MIN[slug]) * 60_000;
@@ -50,6 +57,36 @@ async function nap(ms: number) {
   for (let left = ms; left > 0 && !stopping; left -= 1000) await sleep(Math.min(1000, left));
 }
 
+/** Winkels waarvan op dit moment een volledige ronde loopt (dan is een hete verversing overbodig). */
+const fullRunning = new Set<StoreSlug>();
+
+async function hotLoop(slug: StoreSlug, startDelayMs: number) {
+  await nap(startDelayMs);
+  let tick = 0;
+  let fails = 0;
+  while (!stopping) {
+    tick++;
+    if (!fullRunning.has(slug)) {
+      try {
+        const r = await refreshHot(db, slug);
+        fails = 0;
+        // alleen loggen als er iets te melden valt (anders elke 5 min een regel per winkel)
+        if (r.changed || r.failed || r.created || tick % 12 === 1) {
+          say(
+            `${slug}·hot`,
+            `${r.candidates} lijstproducten: ${r.found} gevonden · ${r.changed} gewijzigd · ${r.missing} niet gevonden` +
+              `${r.failed ? ` · ${r.failed} fout` : ""} (${fmtMin(r.durationMs)})`,
+          );
+        }
+      } catch (e) {
+        fails++;
+        say(`${slug}·hot`, `MISLUKT (${fails}× op rij): ${e instanceof Error ? e.message.split("\n").filter(Boolean).pop() : e}`);
+      }
+    }
+    await nap(Math.min(30 * 60_000, hotEveryMs * 2 ** Math.min(fails, 3)));
+  }
+}
+
 async function runLoop(slug: StoreSlug, startDelayMs: number): Promise<boolean> {
   await nap(startDelayMs);
   let fails = 0;
@@ -58,6 +95,7 @@ async function runLoop(slug: StoreSlug, startDelayMs: number): Promise<boolean> 
   while (!stopping) {
     const t0 = Date.now();
     say(slug, "ronde gestart");
+    fullRunning.add(slug);
     // Ook een onbereikbare database (of een ontbrekende seed) mag de worker niet laten
     // crashen: dat telt als een mislukte ronde met terugval, niet als het einde.
     const r = await crawlStore(db, slug, { limit, log: verbose ? (m) => say(slug, `  ${m}`) : undefined }).catch(
@@ -76,6 +114,7 @@ async function runLoop(slug: StoreSlug, startDelayMs: number): Promise<boolean> 
       }),
     );
 
+    fullRunning.delete(slug);
     if (r.ok) {
       fails = 0;
       say(
@@ -125,7 +164,9 @@ async function main() {
   for (const sig of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"] as const) process.on(sig, () => stop(sig));
 
   // winkels verspreid starten, zodat ze niet allemaal tegelijk de database bestormen
+  const hot = once ? [] : wanted.filter((s) => HOT_STORES.includes(s)).map((s, i) => hotLoop(s, 60_000 + i * 20_000));
   const results = await Promise.all(wanted.map((s, i) => runLoop(s, once ? 0 : i * 30_000)));
+  await Promise.all(hot);
   if (once && results.some((ok) => !ok)) process.exitCode = 1;
 }
 

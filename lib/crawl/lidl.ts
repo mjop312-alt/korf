@@ -102,6 +102,8 @@ function map(item: LidlItem): CrawledProduct | null {
 
 export const lidlCrawler: Crawler = {
   store: "lidl",
+  // geen lookup: zoeken vindt maar ~50% van de producten terug (en kost ~2 s per stuk); de volledige
+  // ronde van ~200 producten is goedkoper
   async *crawlAll(opts: CrawlOptions = {}) {
     const log = opts.log ?? (() => {});
     const seen = new Set<string>();

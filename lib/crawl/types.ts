@@ -36,8 +36,21 @@ export interface CrawlOptions {
   log?: (message: string) => void;
 }
 
+/** Wat we van een bekend winkelproduct weten om het gericht te kunnen opzoeken. */
+export interface LookupItem {
+  externalId: string;
+  title: string;
+  categoryTop: string | null;
+}
+
 export interface Crawler {
   store: StoreSlug;
   /** Volledige ronde over het hele assortiment; levert batches (bv. één pagina). */
   crawlAll(opts?: CrawlOptions): AsyncGenerator<CrawledProduct[]>;
+  /**
+   * Eén bekend product gericht opnieuw ophalen (zoeken op titel) — voor het snel verversen van
+   * producten die op lijsten staan, zonder het hele assortiment te doorlopen. null ⇒ niet gevonden.
+   * Winkels zonder zoek-API hebben dit niet en blijven op de volledige ronde leunen.
+   */
+  lookup?(item: LookupItem): Promise<CrawledProduct | null>;
 }

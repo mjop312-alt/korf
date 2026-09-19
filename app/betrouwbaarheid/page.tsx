@@ -106,7 +106,7 @@ export default async function BetrouwbaarheidPage() {
             a={
               <>
                 <p>
-                  Bij elke prijs staat wanneer die voor het laatst is gecontroleerd. Is een prijs
+                  De volledige catalogus wordt om de 15 tot 60 minuten ververst (zie de tabel). Producten die in een lijst, favoriet of prijsalert staan, worden bij Albert Heijn en Jumbo elke 5 minuten apart opgehaald; bij de andere winkels geldt het ritme van de tabel. Bij elke prijs staat wanneer die voor het laatst is gecontroleerd. Is een prijs
                   ouder dan de drempel (standaard 24 uur), dan verschijnt een{" "}
                   <strong>verouderd-waarschuwing</strong> en telt die winkel niet zomaar als
                   &ldquo;goedkoopste&rdquo; zonder jouw bevestiging.

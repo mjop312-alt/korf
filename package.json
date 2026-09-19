@@ -27,7 +27,8 @@
     "regroup": "tsx scripts/regroup.ts",
     "enrich-ean": "tsx scripts/enrich-ean.ts",
     "purge-mock": "tsx scripts/purge-mock.ts",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "hot": "tsx scripts/hot.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.0",
