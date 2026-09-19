@@ -22,7 +22,10 @@ export function AccountMenu() {
 
   return (
     <div className="flex items-center gap-3">
-      <Link href="/dashboard" className="hidden text-muted hover:text-ink sm:inline">
+      <Link href="/lijsten" className="hidden text-muted hover:text-ink sm:inline">
+        Mijn lijsten
+      </Link>
+      <Link href="/dashboard" className="max-w-[7rem] truncate text-ink hover:underline" title={label}>
         {label.split(" ")[0]}
       </Link>
       <button
