@@ -15,7 +15,7 @@ export interface CompareCatalog {
 }
 
 async function build(): Promise<CompareCatalog> {
-  const [sms, canon, prices] = await Promise.all([
+  const [sms, canon, freshRows] = await Promise.all([
     db.supermarket.findMany({ orderBy: { slug: "asc" } }),
     db.canonicalProduct.findMany({
       include: {
@@ -30,9 +30,15 @@ async function build(): Promise<CompareCatalog> {
         },
       },
     }),
-    db.price.findMany({
-      select: { collectedAt: true, storeProduct: { select: { supermarket: { select: { slug: true } } } } },
-    }),
+    // alleen prijzen die de vergelijking daadwerkelijk gebruikt (gekoppeld aan een canoniek
+    // product), en als aggregatie — de crawl-catalogus telt tienduizenden rijen
+    db.$queryRaw<{ slug: string; oldest: Date }[]>`
+      SELECT s.slug AS slug, MIN(p."collectedAt") AS oldest
+      FROM "Price" p
+      JOIN "StoreProduct" sp ON sp.id = p."storeProductId"
+      JOIN "Supermarket" s ON s.id = sp."supermarketId"
+      WHERE sp."canonicalProductId" IS NOT NULL AND sp.available = true
+      GROUP BY s.slug`,
   ]);
 
   const supermarkets: Supermarket[] = sms.map((s) => ({
@@ -78,12 +84,9 @@ async function build(): Promise<CompareCatalog> {
 
   const byStore: Record<string, string> = {};
   let oldest: Date | null = null;
-  for (const pr of prices) {
-    const slug = pr.storeProduct.supermarket.slug;
-    if (!byStore[slug] || pr.collectedAt < new Date(byStore[slug])) {
-      byStore[slug] = pr.collectedAt.toISOString();
-    }
-    if (!oldest || pr.collectedAt < oldest) oldest = pr.collectedAt;
+  for (const r of freshRows) {
+    byStore[r.slug] = r.oldest.toISOString();
+    if (!oldest || r.oldest < oldest) oldest = r.oldest;
   }
 
   return { catalog, supermarkets, freshness: { oldest: oldest?.toISOString() ?? null, byStore } };

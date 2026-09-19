@@ -247,12 +247,21 @@ model StoreProduct {
   externalUrl        String?
   imageUrl           String?
   available          Boolean @default(true)
+  categoryTop        String? // hoofdcategorie in de winkel zelf, bv. "Zuivel, boter en eieren"
+  categoryPath       String? // volledig pad, bv. "Zuivel, boter en eieren > Verse melk > Halfvolle melk"
+  packLabel          String? // ruwe verpakkingstekst van de winkel, bv. "6 x 1 L"
+  lastSeenAt         DateTime @default(now()) // laatste keer dat de crawler dit product zag
 
   price        Price?
   priceHistory PriceHistory[]
 
+  @@unique([supermarketId, externalId])
   @@index([supermarketId])
+  @@index([supermarketId, available])
   @@index([canonicalProductId])
+  @@index([ean])
+  @@index([brandId])
+  @@index([categoryTop])
 }
 
 /// ─────────────────────────── Prijzen ───────────────────────────
@@ -266,8 +275,11 @@ model Price {
   promoPriceCents Int?
   promotionId    String?
   promotion      Promotion? @relation(fields: [promotionId], references: [id])
-  source         String   @default("mock") // mock | official_api | partner_feed | manual
+  source         String   @default("mock") // mock | unofficial_api | official_api | partner_feed | manual
   collectedAt    DateTime @default(now())
+
+  @@index([isPromo])
+  @@index([collectedAt])
 }
 
 model PriceHistory {
@@ -293,6 +305,8 @@ model Promotion {
   autoApplied   Boolean  @default(false)
 
   prices Price[]
+
+  @@index([supermarketId, endsAt])
 }
 
 /// ─────────────────────────── Gebruiker × product ───────────────────────────
@@ -320,4 +334,24 @@ model FavoriteProduct {
   canonicalProduct CanonicalProduct @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
 
   @@id([userId, canonicalProductId])
+}
+
+/// Logboek van crawler-rondes (worker + `npm run crawl`): hoe vers is de data, en gaat het goed?
+model CrawlRun {
+  id           String    @id @default(cuid())
+  store        String    // ah | jumbo | lidl
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  ok           Boolean   @default(false)
+  products     Int       @default(0)
+  created      Int       @default(0)
+  changed      Int       @default(0)
+  unchanged    Int       @default(0)
+  promos       Int       @default(0)
+  markedGone   Int       @default(0)
+  durationMs   Int       @default(0)
+  error        String?
+  partial      Boolean   @default(false) // true: met --limit, of te weinig producten voor "verdwenen"-markering
+
+  @@index([store, startedAt])
 }

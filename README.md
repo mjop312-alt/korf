@@ -120,6 +120,24 @@ Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/
 | `scripts/weekly-summary.ts` | **Wekelijkse besparingssamenvatting** — mailt elke gebruiker die afgelopen 7 dagen ≥ 1 boodschappentrip afrondde (respecteert `notify.weeklySummary`): bespaard deze week / deze maand / sinds het begin. Cron: 1×/week. Geen trip = geen mail. |
 | `lib/email.ts` + `lib/email-templates.ts` | E-mailverzending via de **Resend** REST-API (geen SDK). **No-op zonder `RESEND_API_KEY`** — de scripts loggen dan alleen wat ze zouden sturen (dry-run), net als de Sentry-setup. Aanzetten: account op resend.com → API-key + `EMAIL_FROM` in `.env`. |
 
+## Volledige catalogus + worker (live prijzen en acties)
+
+Korf haalt het **hele assortiment** van de supermarkten binnen (alle merken en huismerken, prijzen, acties) en houdt dat bij met een worker. Dit vervangt de oude 65-producten-mockcatalogus (die wordt in een volgende stap uit de app gehaald).
+
+| Pad | Wat |
+| --- | --- |
+| `lib/crawl/ah.ts` | **Albert Heijn** — per hoofdcategorie (`taxonomyId`), 1.000 producten per verzoek. AH weigert offset ≥ 3.000 (HTTP 400): categorieën boven de 3.000 worden automatisch in hun subcategorieën opgedeeld. Alleen `NATIONAL`-bonus telt als aanbieding; de online "volumevoordeel"-kortingen (`AHONLINE`) niet. Echte begin-/einddatums. |
+| `lib/crawl/jumbo.ts` | **Jumbo** — GraphQL per hoofdcategorie, met EAN, categoriepad en echte actie-data. Een falende pagina wordt 3× herhaald en anders overgeslagen (niet de hele categorie). |
+| `lib/crawl/lidl.ts` | **Lidl** — zoeken op `*` en food filteren. **Lidl.nl toont online maar ~200 food-producten** (van 9.361 items is de rest non-food): het volledige winkelschap staat niet online, dus dat kan niet uit deze bron. Lidl geeft geen merk/EAN/categorie mee; een titel in HOOFDLETTERS wordt als merk gelezen, anders geldt het als huismerk. |
+| `lib/crawl/store.ts` | Bulk-opslag (`INSERT … ON CONFLICT` via `unnest`, ~800 producten per batch). Prijsgeschiedenis **alleen bij een wijziging**; onveranderde prijzen krijgen enkel een nieuwe `collectedAt`. Verdwenen producten worden na een volledige ronde op "niet beschikbaar" gezet (alleen bij ≥ 70% van het vorige aantal). |
+| `lib/crawl/run.ts` | Eén ronde voor één winkel + logboek in de tabel `CrawlRun` (hoe vers, hoeveel, gelukt?). |
+| `scripts/crawl.ts` | `npm run crawl` · `-- --store=ah` · `-- --dry --limit=200` (niets opslaan). |
+| `scripts/worker.ts` | `npm run worker` — houdt alles vers, per winkel op een eigen ritme, met terugval bij fouten. `-- --once` voor cron/tests. |
+
+**Ritme.** Geen enkele winkel heeft een "alleen aanbiedingen"-route (getest), dus elke verversing is een volledige scan van die winkel. Standaard: **AH elke 15 min, Jumbo elke 30, Lidl elke 60** (`CRAWL_INTERVAL_<WINKEL>_MIN` in `.env`). Een ronde kost AH ≈ 350 verzoeken (~2–3 min), Jumbo ≈ 1.000 (~4 min), Lidl ≈ 95 trage verzoeken (~4 min). Elke 5 minuten kan, maar is op onofficiële API's vragen om een blokkade — en prijzen veranderen hooguit een paar keer per dag (nieuwe acties meestal maandag).
+
+**Draaien.** De worker is een gewoon Node-proces: laat 'm draaien in een terminal, of start 'm bij het inloggen via Windows Taakplanner (`npm run worker`, werkmap = projectmap). Elke schrijfactie houdt de Neon-database wakker; een 24/7-worker past waarschijnlijk niet in het gratis Neon-plan.
+
 ## Legal & SEO
 
 | Pad | Wat |

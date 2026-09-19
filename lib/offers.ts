@@ -23,10 +23,12 @@ export async function getOffers(opts: { store?: string; category?: string } = {}
     where: {
       isPromo: true,
       promotion: { endsAt: { gte: now } },
-      ...(opts.store ? { storeProduct: { supermarket: { slug: opts.store } } } : {}),
-      ...(opts.category
-        ? { storeProduct: { canonicalProduct: { category: { slug: opts.category } } } }
-        : {}),
+      storeProduct: {
+        // de volledige crawl-catalogus heeft (nog) geen canoniek product; die horen hier niet bij
+        canonicalProductId: { not: null },
+        ...(opts.store ? { supermarket: { slug: opts.store } } : {}),
+        ...(opts.category ? { canonicalProduct: { category: { slug: opts.category } } } : {}),
+      },
     },
     include: {
       promotion: true,
