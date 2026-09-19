@@ -98,7 +98,7 @@ export async function searchGroups(
         ws.map((t) => Prisma.sql`lower(cp2.name) ~ ${"(^| )" + t.replace(/[^a-z0-9]/g, "") + "( |$)"}`),
         " AND ",
       )} THEN 0 ELSE 1 END`
-    : Prisma.sql`0`;
+    : Prisma.sql`0::int`; // niet kaal "0": ORDER BY 0 is een kolomnummer
   const order =
     o.sort === "price"
       ? Prisma.sql`g.min_cents ASC, g.stores DESC`

@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
+// de zware groepen-query hoeft niet bij elk bezoek van een crawler te draaien
+export const revalidate = 3600;
 
 // Zet in productie op de echte domeinnaam.
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

@@ -172,28 +172,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </ul>
           </>
         )}
-
-        {/* alternatieven */}
-        {product.alternatives.length > 0 && (
-          <>
-            <h2 className="mt-10 font-display text-xl font-light text-ink">In dezelfde categorie</h2>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {product.alternatives.map((a) => (
-                <li key={a.slug}>
-                  <Link
-                    href={`/product/${a.slug}`}
-                    className="flex items-center justify-between rounded-xl border border-line bg-raised px-4 py-2.5 text-sm hover:border-brass-line"
-                  >
-                    <span className="text-ink">{a.name}</span>
-                    <span className="font-mono text-xs text-sage">
-                      {a.lowestCents != null ? `vanaf ${formatEuro(a.lowestCents)}` : ""}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
       </main>
       <SiteFooter />
     </div>

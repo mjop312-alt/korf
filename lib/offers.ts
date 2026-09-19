@@ -123,17 +123,6 @@ export async function getProductDetail(slug: string) {
     })
     .sort((a, b) => a.effectiveCents - b.effectiveCents);
 
-  const alternatives = await db.canonicalProduct.findMany({
-    where: { categoryId: cp.categoryId, slug: { not: slug } },
-    take: 6,
-    include: {
-      storeProducts: {
-        where: { price: { isNot: null } },
-        include: { price: true, supermarket: { select: { slug: true } } },
-      },
-    },
-  });
-
   return {
     slug: cp.slug,
     name: cp.name,
@@ -143,20 +132,6 @@ export async function getProductDetail(slug: string) {
     imageUrl: cp.imageUrl,
     offers,
     lowest: offers[0] ?? null,
-    alternatives: alternatives
-      .map((a) => {
-        const cents = a.storeProducts
-          .map((sp) =>
-            sp.price
-              ? sp.price.isPromo && sp.price.promoPriceCents != null
-                ? sp.price.promoPriceCents
-                : sp.price.priceCents
-              : Infinity,
-          )
-          .sort((x, y) => x - y)[0];
-        return { slug: a.slug, name: a.name, lowestCents: Number.isFinite(cents) ? cents : null };
-      })
-      .filter((a) => a.lowestCents != null),
   };
 }
 

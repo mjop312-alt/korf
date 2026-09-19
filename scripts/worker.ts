@@ -109,13 +109,20 @@ async function main() {
       "\n           Stoppen: Ctrl+C (de lopende ronde wordt afgemaakt)",
   );
 
-  const stop = () => {
-    if (stopping) process.exit(1); // tweede Ctrl+C: meteen weg
+  // Een vluchtige dubbele Ctrl+C (bv. vanuit een ander proces op dezelfde console) mag de worker
+  // niet meteen doden: pas een tweede signaal na 10 s telt als "meteen stoppen". Elk signaal wordt gelogd.
+  let firstSignalAt = 0;
+  const stop = (signal: string) => {
+    console.log(`${stamp()} Signaal ${signal} ontvangen`);
+    if (stopping) {
+      if (Date.now() - firstSignalAt > 10_000) process.exit(1);
+      return;
+    }
     stopping = true;
-    console.log(`${stamp()} Stoppen na de lopende ronde… (nogmaals Ctrl+C om meteen te stoppen)`);
+    firstSignalAt = Date.now();
+    console.log(`${stamp()} Stoppen na de lopende ronde… (nogmaals Ctrl+C na 10 s om meteen te stoppen)`);
   };
-  process.on("SIGINT", stop);
-  process.on("SIGTERM", stop);
+  for (const sig of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"] as const) process.on(sig, () => stop(sig));
 
   // winkels verspreid starten, zodat ze niet allemaal tegelijk de database bestormen
   const results = await Promise.all(wanted.map((s, i) => runLoop(s, once ? 0 : i * 30_000)));
