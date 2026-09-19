@@ -21,6 +21,8 @@ const STORES = [
   { slug: "ah", name: "Albert Heijn" },
   { slug: "jumbo", name: "Jumbo" },
   { slug: "lidl", name: "Lidl" },
+  { slug: "aldi", name: "Aldi" },
+  { slug: "plus", name: "PLUS" },
 ];
 
 export default async function ProductenPage({ searchParams }: { searchParams: Promise<SP> }) {

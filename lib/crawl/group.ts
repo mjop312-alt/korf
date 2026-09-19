@@ -54,7 +54,7 @@ export function categoryFor(categoryTop: string | null, title: string): string {
   return (CATEGORIES.find((c) => c.test.test(hay)) ?? CATEGORIES[CATEGORIES.length - 1]).slug;
 }
 
-const STORE_PREFIX = new Set(["ah", "albert", "heijn", "jumbo", "jumbos", "lidl"]);
+const STORE_PREFIX = new Set(["ah", "albert", "heijn", "jumbo", "jumbos", "lidl", "plus", "aldi"]);
 const UNIT_WORDS = new Set(["g", "gr", "gram", "kg", "l", "ltr", "liter", "litre", "cl", "ml", "st", "stuks", "stuk", "x"]);
 // verpakkingswoorden die niets zeggen over het product zelf
 const NOISE = new Set([

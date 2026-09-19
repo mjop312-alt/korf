@@ -9,6 +9,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { linkGroups } from "./groups";
+import { STORES } from "../stores";
 import type { CrawledProduct, StoreSlug } from "./types";
 import { parsePack, weekEnd } from "./util";
 
@@ -24,8 +25,15 @@ const newId = () => `c${randomUUID().replace(/-/g, "")}`;
 
 export async function supermarketId(db: PrismaClient, slug: StoreSlug): Promise<string> {
   const s = await db.supermarket.findUnique({ where: { slug }, select: { id: true } });
-  if (!s) throw new Error(`Supermarkt "${slug}" staat niet in de database — draai eerst de seed.`);
-  return s.id;
+  if (s) return s.id;
+  // een nieuwe winkel (bv. Aldi/PLUS) hoeft geen seed: de rij wordt hier aangemaakt
+  const meta = STORES.find((x) => x.id === slug);
+  if (!meta) throw new Error(`Supermarkt "${slug}" is onbekend (lib/stores.ts).`);
+  const created = await db.supermarket.create({
+    data: { slug, name: meta.name, short: meta.short, brandColor: meta.brandColor, hasOnlineCatalogue: true, dataProvider: slug },
+    select: { id: true },
+  });
+  return created.id;
 }
 
 function promoId(store: string, p: NonNullable<CrawledProduct["promo"]>, ends: Date): string {

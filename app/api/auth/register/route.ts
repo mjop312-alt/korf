@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { SUPERMARKETS } from "@/lib/mock-data";
+import { STORES as SUPERMARKETS } from "@/lib/stores";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/validation";
 

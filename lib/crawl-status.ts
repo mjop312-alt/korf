@@ -16,9 +16,11 @@ const NOTES: Record<string, string> = {
   ah: "volledige webshop-catalogus, incl. Bonus-acties",
   jumbo: "volledige webshop-catalogus, incl. acties met echte einddatum",
   lidl: "alleen wat Lidl.nl online toont (voedingsmiddelen); geen merk of EAN in de bron",
+  aldi: "het online assortiment van aldi.nl (ruim 1.700 producten); geen EAN in de bron",
+  plus: "volledige webshop-catalogus, incl. aanbiedingen; geen EAN in de lijst",
 };
 
-const NAMES: Record<string, string> = { ah: "Albert Heijn", jumbo: "Jumbo", lidl: "Lidl" };
+const NAMES: Record<string, string> = { ah: "Albert Heijn", jumbo: "Jumbo", lidl: "Lidl", aldi: "Aldi", plus: "PLUS" };
 
 function ago(d: Date): string {
   const min = Math.round((Date.now() - d.getTime()) / 60_000);

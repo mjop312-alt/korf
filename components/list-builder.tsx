@@ -14,7 +14,7 @@ import { ProductTile } from "@/components/product-tile";
 import { brandChoiceOptions, parseBrandMode, serialiseBrandMode } from "@/lib/catalog";
 import type { GroupCard } from "@/lib/catalog-search";
 import { formatEuro } from "@/lib/compare";
-import { SUPERMARKETS } from "@/lib/mock-data";
+import { STORES as SUPERMARKETS } from "@/lib/stores";
 import { tileBrandFor } from "@/lib/product-visuals";
 import type { BrandMode, CanonicalProduct, CompareResult, ListItem } from "@/lib/types";
 

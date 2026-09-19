@@ -3,13 +3,21 @@
 
 import type { PrismaClient } from "@prisma/client";
 import { ahCrawler } from "./ah";
+import { aldiCrawler } from "./aldi";
 import { jumboCrawler } from "./jumbo";
 import { lidlCrawler } from "./lidl";
+import { plusCrawler } from "./plus";
 import { mergeByEan } from "./groups";
 import { markMissing, persistBatch, supermarketId } from "./store";
 import type { CrawledProduct, Crawler, StoreSlug } from "./types";
 
-export const CRAWLERS: Record<StoreSlug, Crawler> = { ah: ahCrawler, jumbo: jumboCrawler, lidl: lidlCrawler };
+export const CRAWLERS: Record<StoreSlug, Crawler> = {
+  ah: ahCrawler,
+  jumbo: jumboCrawler,
+  lidl: lidlCrawler,
+  aldi: aldiCrawler,
+  plus: plusCrawler,
+};
 export const STORES = Object.keys(CRAWLERS) as StoreSlug[];
 
 // Kleine pagina's (Jumbo: ~25) eerst opsparen: minder database-rondes.

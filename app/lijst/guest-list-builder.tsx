@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ListBuilder } from "@/components/list-builder";
 import { useProductCache } from "@/components/use-product-cache";
 import { isBrandModeAvailable } from "@/lib/catalog";
-import { SUPERMARKETS } from "@/lib/mock-data";
+import { STORES as SUPERMARKETS } from "@/lib/stores";
 import type { BrandMode, CanonicalProduct, ListItem } from "@/lib/types";
 
 const uid = () => Math.random().toString(36).slice(2, 9);

@@ -2,7 +2,7 @@
 // (alle merken, huismerken, prijzen en acties) doorloopt en teruggeeft als
 // `CrawledProduct`-batches. `store.ts` schrijft die in bulk naar de database.
 
-export type StoreSlug = "ah" | "jumbo" | "lidl";
+export type StoreSlug = "ah" | "jumbo" | "lidl" | "aldi" | "plus";
 
 export interface CrawledPromo {
   /** Effectieve stukprijs tijdens de actie in centen; null ⇒ alleen label (1+1, 2e halve prijs, x voor y). */

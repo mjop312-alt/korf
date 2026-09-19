@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site-chrome";
 import { loadGroups } from "@/lib/catalog-db";
 import { db } from "@/lib/db";
 import { getListWithItems, getLists, getUserId, toEngineItems } from "@/lib/lists";
-import { SUPERMARKETS } from "@/lib/mock-data";
+import { STORES as SUPERMARKETS } from "@/lib/stores";
 import { ListEditor } from "./list-editor";
 
 export const dynamic = "force-dynamic";

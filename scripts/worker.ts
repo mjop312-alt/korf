@@ -7,7 +7,7 @@
 //   npm run worker -- --verbose             ook per-categorie-voortgang tonen
 //
 // Ritme (minuten tussen twee rondes, instelbaar in .env):
-//   CRAWL_INTERVAL_AH_MIN=15   CRAWL_INTERVAL_JUMBO_MIN=30   CRAWL_INTERVAL_LIDL_MIN=60
+//   CRAWL_INTERVAL_AH_MIN=15   CRAWL_INTERVAL_JUMBO_MIN=30   CRAWL_INTERVAL_LIDL_MIN=60   CRAWL_INTERVAL_ALDI_MIN=60   CRAWL_INTERVAL_PLUS_MIN=30
 //
 // Waarom geen 5 minuten voor alles? Geen enkele winkel heeft een "alleen aanbiedingen"-route
 // (getest), dus elke verversing is een volledige ronde: AH ≈ 350 verzoeken (~2–3 min), Jumbo
@@ -32,7 +32,7 @@ const verbose = args.verbose === "true";
 const limit = args.limit ? parseInt(args.limit, 10) : undefined;
 const wanted = (args.stores ?? "all") === "all" ? STORES : (args.stores.split(",") as StoreSlug[]);
 
-const DEFAULT_MIN: Record<StoreSlug, number> = { ah: 15, jumbo: 30, lidl: 60 };
+const DEFAULT_MIN: Record<StoreSlug, number> = { ah: 15, jumbo: 30, lidl: 60, aldi: 60, plus: 30 };
 const intervalMs = (slug: StoreSlug) => {
   const v = parseInt(process.env[`CRAWL_INTERVAL_${slug.toUpperCase()}_MIN`] ?? "", 10);
   return (Number.isFinite(v) && v > 0 ? v : DEFAULT_MIN[slug]) * 60_000;

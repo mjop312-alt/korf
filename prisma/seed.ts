@@ -13,7 +13,7 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { findGroupSlug } from "../lib/catalog-search";
 import { ensureCategories } from "../lib/crawl/groups";
-import { SUPERMARKETS } from "../lib/mock-data";
+import { STORES as SUPERMARKETS } from "../lib/stores";
 
 const db = new PrismaClient();
 
@@ -58,6 +58,8 @@ async function main() {
     ah: [52.372, 4.892],
     jumbo: [52.366, 4.9],
     lidl: [52.378, 4.9],
+    aldi: [52.374, 4.905],
+    plus: [52.369, 4.888],
   };
   await db.storeLocation.deleteMany();
   for (const s of SUPERMARKETS) {
