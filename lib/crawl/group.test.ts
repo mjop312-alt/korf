@@ -144,3 +144,30 @@ describe("groupFor — merk telt mee bij wijn en bier", () => {
     expect(key(campina)).toBe(key(fr));
   });
 });
+
+describe("groupFor — smaakwoorden zonder productnaam houden het merk", () => {
+  it("Coca-Cola Cherry en Powerade Cherry zijn verschillende producten", () => {
+    const cola = p("Coca-Cola Cherry", "Coca-Cola", false, "500 ml", "Frisdrank, sappen, koffie");
+    const powerade = p("Powerade Cherry", "Powerade", false, "500 ml", "Frisdrank, sappen, koffie");
+    expect(key(cola)).not.toBe(key(powerade));
+  });
+
+  it("hetzelfde merk in twee winkels blijft één groep", () => {
+    const ah = p("Coca-Cola Cherry", "Coca-Cola", false, "500 ml", "Frisdrank, sappen, koffie");
+    const jumbo = p("Coca-Cola Cherry 0,5 L", "Coca-Cola", false, "0,5 L", "Frisdrank en sappen");
+    expect(key(ah)).toBe(key(jumbo));
+  });
+
+  it("chips met dezelfde smaak van twee merken zijn verschillende producten", () => {
+    expect(key(p("Croky Paprika", "Croky", false, "200 g", "Borrel, chips, snacks"))).not.toBe(
+      key(p("Lay's Paprika", "Lay's", false, "200 g", "Borrel, chips, snacks")),
+    );
+  });
+
+  it("een echte productnaam blijft merkloos matchen, en huismerken blijven samen", () => {
+    expect(key(p("Calvé Mayonaise", "Calvé", false, "500 ml", "Conserven"))).toBe(
+      key(p("Remia Mayonaise", "Remia", false, "500 ml", "Conserven")),
+    );
+    expect(key(p("AH Cola", "AH", true, "1.5 l", "Frisdrank"))).toBe(key(p("Jumbo Cola 1,5 L", "Jumbo", true, "1,5 L", "Frisdrank")));
+  });
+});

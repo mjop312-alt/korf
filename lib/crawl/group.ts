@@ -59,6 +59,17 @@ export function categoryFor(categoryTop: string | null, title: string): string {
 // melk, pasta en dergelijke is het juist andersom (elk merk is "gewoon halfvolle melk").
 const BRAND_MATTERS = /wijn|bier|sterke drank|gedistilleerd|likeur|whisk|jenever|aperitief|spirit/;
 
+// Smaak- en variantwoorden zeggen zonder merk niets over het product: "Coca-Cola Cherry" en
+// "Powerade Cherry" zijn geen hetzelfde product, "Croky Paprika" en "Lay's Paprika" evenmin.
+// Bestaat de kern (na weghalen van het merk) alleen uit zulke woorden, dan houden we het merk.
+// Bewust GEEN productnamen als mango, chocolade of sinaasappel: die zijn ook gewoon een product.
+const VARIANT_WORDS = new Set([
+  "original", "regular", "classic", "lemon", "orange", "zero", "strawberry", "cherry", "vanilla", "vanille",
+  "naturel", "paprika", "cola", "cassis", "peach", "green", "light", "extra", "mild", "fresh", "cream", "sugar",
+  "vol", "cool", "pure", "mini", "max", "intens", "sensitive", "red", "blue", "white", "black", "mint", "lime",
+  "ice", "tea", "energy", "drink",
+]);
+
 const STORE_PREFIX = new Set(["ah", "albert", "heijn", "jumbo", "jumbos", "lidl", "plus", "aldi"]);
 const UNIT_WORDS = new Set(["g", "gr", "gram", "kg", "l", "ltr", "liter", "litre", "cl", "ml", "st", "stuks", "stuk", "x"]);
 // verpakkingswoorden die niets zeggen over het product zelf
@@ -128,6 +139,10 @@ export function groupFor(p: GroupInput): GroupInfo {
   const keepBrand = !p.ownBrand && BRAND_MATTERS.test(fold(p.categoryTop ?? ""));
   const withoutBrand = keepBrand ? all : all.filter((t) => (p.ownBrand ? !STORE_PREFIX.has(t) : !brandTokens.has(t)));
   let core = withoutBrand.filter((t) => !isSizeToken(t) && !NOISE.has(t) && t.length > 1);
+  // alleen smaak-/variantwoorden over ("Cherry"): dan hoort het merk erbij
+  if (!p.ownBrand && !keepBrand && core.length > 0 && core.every((t) => VARIANT_WORDS.has(t))) {
+    core = all.filter((t) => !isSizeToken(t) && !NOISE.has(t) && t.length > 1);
+  }
   // titel == merk ("COCA-COLA"): dan is het merk zelf de enige naam die we hebben
   if (!core.length) core = all.filter((t) => !isSizeToken(t) && !NOISE.has(t) && t.length > 1);
   if (!core.length) core = all.length ? all : ["product"];

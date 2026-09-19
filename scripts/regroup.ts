@@ -14,6 +14,20 @@ const db = new PrismaClient();
 const statsOnly = process.argv.includes("--stats");
 const CHUNK = 2000;
 
+/** Een haperende verbinding (Neon, wifi) mag een lange run niet laten mislukken: blok opnieuw proberen. */
+async function retry<T>(label: string, fn: () => Promise<T>, tries = 8): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i >= tries) throw e;
+      const msg = (e instanceof Error ? e.message : String(e)).split("\n").filter(Boolean).pop();
+      console.log(`  ! ${label}: ${msg} — opnieuw over ${i * 5}s (${i}/${tries})`);
+      await new Promise((r) => setTimeout(r, i * 5000));
+    }
+  }
+}
+
 async function regroup() {
   const stores = await db.supermarket.findMany({ select: { id: true, slug: true } });
   for (const sm of stores) {
@@ -21,7 +35,7 @@ async function regroup() {
     let done = 0;
     let cursor: string | undefined;
     for (;;) {
-      const rows = await db.storeProduct.findMany({
+      const rows = await retry(`${sm.slug} lezen`, () => db.storeProduct.findMany({
         where: { supermarketId: sm.id, externalId: { not: null } },
         orderBy: { id: "asc" },
         take: CHUNK,
@@ -35,9 +49,9 @@ async function regroup() {
           imageUrl: true,
           brand: { select: { name: true, isOwnBrand: true } },
         },
-      });
+      }));
       if (!rows.length) break;
-      await linkGroups(
+      await retry(`${sm.slug} schrijven`, () => linkGroups(
         db,
         sm.id,
         rows.map((r) => ({
@@ -49,14 +63,14 @@ async function regroup() {
           categoryTop: r.categoryTop,
           imageUrl: r.imageUrl,
         })),
-      );
+      ));
       done += rows.length;
       cursor = rows[rows.length - 1].id;
     }
     console.log(`  ${sm.slug}: ${done} producten ingedeeld (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
   }
-  console.log(`  ${await pruneEmptyGroups(db)} lege groepen opgeruimd`);
-  console.log(`  ${await mergeByEan(db)} winkelproducten samengevoegd op EAN`);
+  console.log(`  ${await retry("opruimen", () => pruneEmptyGroups(db))} lege groepen opgeruimd`);
+  console.log(`  ${await retry("EAN-samenvoeging", () => mergeByEan(db))} winkelproducten samengevoegd op EAN`);
 }
 
 async function stats() {
