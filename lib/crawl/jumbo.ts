@@ -182,8 +182,51 @@ export const jumboCrawler: Crawler = {
             log(`Jumbo ${root.id} overgeslagen: ${lastError}`);
             break;
           }
-          log(`Jumbo ${root.name} @${offSet}: pagina overgeslagen (${lastError})`);
-          offSet += PAGE_STEP;
+          // Eén kapot product maakt elk venster van 24 onbruikbaar waar het in valt ("geen data"),
+          // vensters ernaast werken wel. Dus: probeer vensters die vlak vóór en vlak na de
+          // kapotte plek beginnen, zodat alleen het kapotte product zelf ontbreekt.
+          const rescued: JumboProduct[] = [];
+          let next = offSet + PAGE_STEP;
+          const tryWindow = async (s: number) => {
+            try {
+              const r = await gql<{ searchProducts: { products: JumboProduct[] } }>(
+                SEARCH_QUERY,
+                { input: { ...input, offSet: s } },
+                `Jumbo ${root.name} @${s}`,
+              );
+              await sleep(DELAY_MS);
+              return r.searchProducts.products;
+            } catch {
+              return null;
+            }
+          };
+          for (let s = offSet - 1; s > offSet - PAGE_STEP && s >= 0; s--) {
+            const got = await tryWindow(s);
+            if (got?.length) {
+              rescued.push(...got);
+              break;
+            }
+          }
+          for (let s = offSet + 1; s < offSet + PAGE_STEP; s++) {
+            const got = await tryWindow(s);
+            if (got?.length) {
+              rescued.push(...got);
+              next = s + got.length;
+              break;
+            }
+          }
+          const batch: CrawledProduct[] = [];
+          for (const p of rescued) {
+            const m = map(p);
+            if (m && !seen.has(m.externalId)) {
+              seen.add(m.externalId);
+              batch.push(m);
+            }
+          }
+          inRoot += batch.length;
+          log(`Jumbo ${root.name} @${offSet}: kapot venster (${lastError}); ${batch.length} producten teruggehaald via aangrenzende vensters`);
+          if (batch.length) yield batch;
+          offSet = next;
           continue;
         }
         const { count: total, products } = res.searchProducts;
