@@ -11,7 +11,7 @@ import { getMyAlert } from "@/lib/alerts";
 import { isFavorite, toggleFavorite } from "@/lib/favorites";
 import { addToActiveList } from "@/lib/list-actions";
 import { getUserId } from "@/lib/lists";
-import { getPriceHistory, getProductDetail } from "@/lib/offers";
+import { getPriceHistory, getProductDetail, getSizeVariants } from "@/lib/offers";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +34,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   ]);
   if (!product) notFound();
 
-  const [alert, fav] = await Promise.all([getMyAlert(slug), isFavorite(slug)]);
+  const [alert, fav, variants] = await Promise.all([getMyAlert(slug), isFavorite(slug), getSizeVariants(slug)]);
   const lowest = product.lowest;
 
   const jsonLd = {
@@ -149,6 +149,29 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             suggestCents={Math.round((lowest?.effectiveCents ?? 200) * 0.9)}
           />
         </div>
+
+        {variants.length > 0 && (
+          <>
+            <h2 className="mt-10 font-display text-xl font-light text-ink">Andere verpakkingen</h2>
+            <p className="mt-1 text-sm text-muted">Zelfde soort product in een andere hoeveelheid, gesorteerd op prijs per {unitLabel[product.baseUnit] ?? "eenheid"}.</p>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+              {variants.map((v) => (
+                <li key={v.slug}>
+                  <Link
+                    href={`/product/${v.slug}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-line bg-raised px-4 py-2.5 text-sm hover:border-brass-line"
+                  >
+                    <span className="text-ink">{v.name}</span>
+                    <span className="shrink-0 text-right font-mono text-xs text-sage">
+                      {formatEuro(v.lowestCents)}
+                      {v.unitCents != null && <span className="block text-muted">{formatEuro(v.unitCents)} / {unitLabel[v.baseUnit] ?? "eenh."}</span>}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
 
         {/* alternatieven */}
         {product.alternatives.length > 0 && (

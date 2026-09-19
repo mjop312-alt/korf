@@ -209,3 +209,54 @@ export async function getPriceHistory(slug: string, months = 3) {
     points: [...e.points.entries()].sort((a, b) => a[0] - b[0]).map(([t, cents]) => ({ t, cents })),
   }));
 }
+
+export interface SizeVariant {
+  slug: string;
+  name: string;
+  baseUnit: string;
+  /** goedkoopste eenheidsprijs (per kg / l / stuk, in centen) en de winkel waar die geldt */
+  unitCents: number | null;
+  unitStore: string | null;
+  lowestCents: number;
+  stores: string[];
+}
+
+/**
+ * Andere verpakkingen van hetzelfde soort product (zelfde kernwoorden, andere hoeveelheid),
+ * zodat je ook verschillende maten eerlijk op prijs per kilo/liter kunt vergelijken.
+ */
+export async function getSizeVariants(slug: string): Promise<SizeVariant[]> {
+  const rows = await db.$queryRaw<
+    { slug: string; name: string; base_unit: string; unit: number | null; unit_store: string | null; lowest: number; stores: string[] }[]
+  >`
+    WITH me AS (
+      SELECT DISTINCT split_part(sp."matchKey", '|', 1) AS core
+      FROM "StoreProduct" sp JOIN "CanonicalProduct" cp ON cp.id = sp."canonicalProductId"
+      WHERE cp.slug = ${slug} AND sp."matchKey" IS NOT NULL
+      LIMIT 1
+    ), p AS (
+      SELECT cp.slug, cp.name, cp."baseUnit" AS base_unit, s.slug AS store, pr."unitPriceCents" AS unit,
+             CASE WHEN pr."isPromo" AND pr."promoPriceCents" IS NOT NULL THEN pr."promoPriceCents" ELSE pr."priceCents" END AS cents
+      FROM "StoreProduct" sp
+      JOIN me ON split_part(sp."matchKey", '|', 1) = me.core
+      JOIN "CanonicalProduct" cp ON cp.id = sp."canonicalProductId"
+      JOIN "Supermarket" s ON s.id = sp."supermarketId"
+      JOIN "Price" pr ON pr."storeProductId" = sp.id
+      WHERE sp.available AND cp.slug <> ${slug}
+        AND cp."baseUnit" = (SELECT "baseUnit" FROM "CanonicalProduct" WHERE slug = ${slug})
+    )
+    SELECT slug, name, base_unit, MIN(unit) AS unit, (array_agg(store ORDER BY unit NULLS LAST))[1] AS unit_store,
+           MIN(cents)::int AS lowest, array_agg(DISTINCT store) AS stores
+    FROM p GROUP BY slug, name, base_unit
+    ORDER BY MIN(unit) NULLS LAST, name
+    LIMIT 12`;
+  return rows.map((r) => ({
+    slug: r.slug,
+    name: r.name,
+    baseUnit: r.base_unit,
+    unitCents: r.unit,
+    unitStore: r.unit_store,
+    lowestCents: r.lowest,
+    stores: r.stores,
+  }));
+}
