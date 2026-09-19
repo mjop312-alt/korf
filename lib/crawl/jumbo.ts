@@ -3,7 +3,7 @@
 // `offSet`. Jumbo geeft EAN, categoriepad en échte begin-/einddata van acties.
 
 import type { CrawledProduct, CrawlOptions, Crawler } from "./types";
-import { fetchJson, parseDate, sleep, USER_AGENT } from "./util";
+import { fetchJson, normalizeEan, parseDate, sleep, USER_AGENT } from "./util";
 
 const GRAPHQL_URL = "https://www.jumbo.com/api/graphql";
 const DELAY_MS = 200;
@@ -99,7 +99,7 @@ function map(p: JumboProduct): CrawledProduct | null {
     categoryTop: cats[0]?.name ?? null,
     categoryPath: cats.length ? cats.map((c) => c.name).join(" > ") : null,
     packLabel: p.subtitle ?? null,
-    ean: p.ean ?? null,
+    ean: normalizeEan(p.ean),
     imageUrl: p.image ?? null,
     url: p.link ? `https://www.jumbo.com${p.link}` : null,
     available: !/UNAVAIL|NOT_|OUT/i.test(p.availability?.availability ?? ""),
@@ -109,31 +109,24 @@ function map(p: JumboProduct): CrawledProduct | null {
   };
 }
 
-/** Hoofdcategorieën: alles onder "SG<n>", plus losse categorieën die daar niet onder hangen. */
+// Geen boodschappen: tijdschriften en de servicebalie/non-food-afdeling.
+const SKIP_ROOTS = /tijdschrift|servicebalie|non-food/i;
+
+/**
+ * Hoofdcategorieën = de directe kinderen van de ene wortel ("PRODUCTEN", ~46 stuks). Dat zijn
+ * zowel de `SG<n>`-categorieën als numerieke (Groente, Fruit, Brood, Kaas, …). Zoeken op de
+ * wortel zelf geeft niets terug.
+ */
 async function rootCategories(): Promise<{ id: string; name: string }[]> {
   const { categories } = await gql<{ categories: { id: string; name: string; parentId: string | null }[] }>(
     CATEGORIES_QUERY,
     {},
     "Jumbo categorieën",
   );
-  const byId = new Map(categories.map((c) => [c.id, c]));
-  const rootOf = (id: string): string => {
-    const sg = id.match(/^(SG\d+)/);
-    if (sg) return sg[1];
-    let cur = id;
-    for (let i = 0; i < 10; i++) {
-      const parent = byId.get(cur)?.parentId;
-      if (!parent) return cur;
-      cur = parent;
-    }
-    return cur;
-  };
-  const roots = new Map<string, string>();
-  for (const c of categories) {
-    const r = rootOf(c.id);
-    if (!roots.has(r)) roots.set(r, byId.get(r)?.name ?? r);
-  }
-  return [...roots].map(([id, name]) => ({ id, name }));
+  const top = categories.find((c) => !c.parentId);
+  const roots = categories.filter((c) => top && c.parentId === top.id && !SKIP_ROOTS.test(c.name));
+  if (!roots.length) throw new Error("Jumbo: geen hoofdcategorieën gevonden onder de wortel");
+  return roots.map(({ id, name }) => ({ id, name }));
 }
 
 export const jumboCrawler: Crawler = {

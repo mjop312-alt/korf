@@ -75,7 +75,7 @@ export default async function SharedListPage({ params }: { params: Promise<{ tok
           </Link>
         </div>
 
-        <p className="mt-8 text-xs text-muted">Demodata — geen actuele prijzen.</p>
+        <p className="mt-8 text-xs text-muted">Prijzen van het moment van bekijken; zie Betrouwbaarheid voor de kanttekeningen.</p>
       </main>
       <SiteFooter />
     </div>

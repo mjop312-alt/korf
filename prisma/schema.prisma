@@ -251,6 +251,8 @@ model StoreProduct {
   categoryPath       String? // volledig pad, bv. "Zuivel, boter en eieren > Verse melk > Halfvolle melk"
   packLabel          String? // ruwe verpakkingstekst van de winkel, bv. "6 x 1 L"
   lastSeenAt         DateTime @default(now()) // laatste keer dat de crawler dit product zag
+  matchKey           String? // productgroep-sleutel (naam zonder merk + grootte), zie lib/crawl/group.ts
+  searchText         String? // accent-vrije kleine letters: titel + merk, voor zoeken
 
   price        Price?
   priceHistory PriceHistory[]
@@ -262,6 +264,7 @@ model StoreProduct {
   @@index([ean])
   @@index([brandId])
   @@index([categoryTop])
+  @@index([matchKey])
 }
 
 /// ─────────────────────────── Prijzen ───────────────────────────

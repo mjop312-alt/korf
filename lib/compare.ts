@@ -48,7 +48,7 @@ function pickCandidate(
   const v = variants[0];
   return {
     storeId,
-    title: `${v.brand} ${product.name}`,
+    title: v.title ?? `${v.brand} ${product.name}`,
     brand: v.brand,
     ownBrand: v.ownBrand,
     effectiveCents: effectiveCents(v),
@@ -56,6 +56,9 @@ function pickCandidate(
     unitPriceCents: v.unitPriceCents ?? null,
     promo: v.promo ?? null,
     lineCents: effectiveCents(v) * item.quantity,
+    packLabel: v.packLabel ?? null,
+    url: v.url ?? null,
+    imageUrl: v.imageUrl ?? null,
   };
 }
 

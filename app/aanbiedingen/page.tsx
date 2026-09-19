@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ProductTile } from "@/components/product-tile";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { addToActiveList } from "@/lib/list-actions";
-import { getOfferFilters, getOffers } from "@/lib/offers";
+import { getOfferFilters, getOffers, OFFERS_PAGE_SIZE } from "@/lib/offers";
 import { formatEuro } from "@/lib/compare";
 import { getUserId } from "@/lib/lists";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Aanbiedingen — Korf",
-  description: "Actuele aanbiedingen bij Albert Heijn, Jumbo en Lidl, filterbaar per winkel en categorie. Demodata.",
+  description: "Actuele aanbiedingen bij Albert Heijn, Jumbo en Lidl, filterbaar per winkel en categorie.",
 };
 
 const fmtDate = (iso: string) =>
@@ -20,18 +20,20 @@ const fmtDate = (iso: string) =>
 export default async function AanbiedingenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ winkel?: string; categorie?: string }>;
+  searchParams: Promise<{ winkel?: string; categorie?: string; pagina?: string }>;
 }) {
   const sp = await searchParams;
-  const [offers, filters, userId] = await Promise.all([
-    getOffers({ store: sp.winkel, category: sp.categorie }),
+  const page = Math.max(parseInt(sp.pagina ?? "1", 10) || 1, 1);
+  const [{ offers, total }, filters, userId] = await Promise.all([
+    getOffers({ store: sp.winkel, category: sp.categorie, page }),
     getOfferFilters(),
     getUserId(),
   ]);
 
   const chip = (active: boolean) =>
     `rounded-full border px-3 py-1 text-xs ${active ? "border-brass bg-brass-wash text-ink" : "border-line text-muted hover:text-ink"}`;
-  const withParam = (k: "winkel" | "categorie", v?: string) => {
+  const pages = Math.max(Math.ceil(total / OFFERS_PAGE_SIZE), 1);
+  const withParam = (k: "winkel" | "categorie" | "pagina", v?: string) => {
     const q = new URLSearchParams();
     if (sp.winkel && k !== "winkel") q.set("winkel", sp.winkel);
     if (sp.categorie && k !== "categorie") q.set("categorie", sp.categorie);
@@ -46,7 +48,7 @@ export default async function AanbiedingenPage({
       <main id="main-content" className="mx-auto max-w-5xl px-6 py-10">
         <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Aanbiedingen</p>
         <h1 className="mt-2 font-display text-3xl font-light text-ink">Wat er nu in de actie is</h1>
-        <p className="mt-2 text-sm text-muted">Demodata — geen actuele prijzen. {offers.length} aanbiedingen.</p>
+        <p className="mt-2 text-sm text-muted">{total.toLocaleString("nl-NL")} aanbiedingen, rechtstreeks uit de winkelcatalogi.</p>
 
         {/* filters */}
         <div className="mt-6 space-y-2">
@@ -70,7 +72,7 @@ export default async function AanbiedingenPage({
           </div>
         </div>
 
-        {offers.length === 0 ? (
+        {total === 0 ? (
           <p className="mt-10 rounded-2xl border border-line bg-raised p-8 text-center text-sm text-muted">
             Geen aanbiedingen voor deze combinatie.
           </p>
@@ -134,6 +136,14 @@ export default async function AanbiedingenPage({
               </li>
             ))}
           </ul>
+        )}
+
+        {pages > 1 && (
+          <nav className="mt-8 flex items-center justify-center gap-3 text-sm" aria-label="Paginering">
+            {page > 1 && <Link href={withParam("pagina", String(page - 1))} className={chip(false)}>← vorige</Link>}
+            <span className="font-mono text-xs text-muted">pagina {page} van {pages.toLocaleString("nl-NL")}</span>
+            {page < pages && <Link href={withParam("pagina", String(page + 1))} className={chip(false)}>volgende →</Link>}
+          </nav>
         )}
       </main>
       <SiteFooter />

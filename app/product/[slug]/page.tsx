@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const p = await getProductDetail(slug);
   return p
-    ? { title: `${p.name} — prijzen vergeleken — Korf`, description: `Prijzen, prijsverloop en alternatieven voor ${p.name}. Demodata.` }
+    ? { title: `${p.name} — prijzen vergeleken — Korf`, description: `Prijzen, prijsverloop en alternatieven voor ${p.name}.` }
     : { title: "Product niet gevonden — Korf" };
 }
 
@@ -132,7 +132,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         {/* prijsverloop */}
         <h2 className="mt-10 font-display text-xl font-light text-ink">Prijsverloop</h2>
-        <p className="mt-1 text-sm text-muted">Laagste prijs per week per supermarkt, laatste 3 maanden. Demodata.</p>
+        <p className="mt-1 text-sm text-muted">Laagste prijs per week per supermarkt, laatste 3 maanden.</p>
         <div className="mt-4 rounded-2xl border border-line bg-raised p-4 sm:p-6">
           <PriceHistoryChart
             series={history.map((h) => ({ storeSlug: h.storeSlug, storeName: h.storeName, color: h.color, points: h.points }))}

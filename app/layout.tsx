@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Korf — je lijst, elke supermarktprijs ernaast",
   description:
-    "Korf vergelijkt de prijzen en aanbiedingen van Nederlandse supermarkten voor je hele boodschappenlijst en laat zien wat je bespaart. Demodata tenzij een echte databron is aangesloten.",
+    "Korf vergelijkt de prijzen en aanbiedingen van Nederlandse supermarkten voor je hele boodschappenlijst en laat zien wat je bespaart.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

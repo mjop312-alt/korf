@@ -23,10 +23,13 @@ function validate(body: unknown): body is Body {
   if (!body || typeof body !== "object") return false;
   const b = body as Record<string, unknown>;
   if (!Array.isArray(b.items) || !Array.isArray(b.storeIds)) return false;
+  const ids = new Set(b.items.map((it) => (it as ListItem | null)?.id));
+  if (ids.size !== b.items.length) return false; // ids ontbreken of zijn dubbel
   return b.items.every(
     (it) =>
       it &&
       typeof it === "object" &&
+      typeof (it as ListItem).id === "string" &&
       typeof (it as ListItem).productId === "string" &&
       typeof (it as ListItem).quantity === "number" &&
       (it as ListItem).quantity > 0,
@@ -50,12 +53,15 @@ export async function POST(request: Request) {
   }
   if (!validate(body)) {
     return NextResponse.json(
-      { error: "Verwacht { items: [{ productId, quantity, brandMode }], storeIds: [] }" },
+      { error: "Verwacht { items: [{ id (uniek), productId, quantity, brandMode }], storeIds: [] }" },
       { status: 422 },
     );
   }
 
-  const { catalog, supermarkets, freshness } = await getCompareCatalog();
+  if (body.items.length > 100) {
+    return NextResponse.json({ error: "Maximaal 100 regels per vergelijking" }, { status: 422 });
+  }
+  const { catalog, supermarkets, freshness } = await getCompareCatalog(body.items.map((it) => it.productId));
 
   // eigen voorkeur "extra winkel waard vanaf" toepassen als de gebruiker is ingelogd
   let minExtra = body.minExtraStoreSavingCents ?? 200;
@@ -78,7 +84,6 @@ export async function POST(request: Request) {
     {
       generatedAt: new Date().toISOString(),
       currency: "EUR",
-      dataMode: process.env.DATA_MODE ?? "mock",
       freshness,
       ...result,
     },

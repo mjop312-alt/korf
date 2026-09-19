@@ -8,6 +8,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
+import { linkGroups } from "./groups";
 import type { CrawledProduct, StoreSlug } from "./types";
 import { parsePack, weekEnd } from "./util";
 
@@ -106,6 +107,21 @@ export async function persistBatch(
       "lastSeenAt" = EXCLUDED."lastSeenAt"
     RETURNING "id", "externalId"`;
   const spId = new Map(rows.map((r) => [r.externalId, r.id]));
+
+  // 2b — productgroep (vergelijkbare producten over winkels heen)
+  await linkGroups(
+    db,
+    smId,
+    items.map((p) => ({
+      externalId: p.externalId,
+      title: p.title,
+      brand: p.brand,
+      ownBrand: p.ownBrand,
+      packLabel: p.packLabel,
+      categoryTop: p.categoryTop,
+      imageUrl: p.imageUrl,
+    })),
+  );
 
   // 3 — acties (deterministisch id ⇒ idempotent)
   const fallbackEnd = weekEnd(now);

@@ -5,9 +5,9 @@ Dit is de **kern uit fase 4**: de geverifieerde scenario-engine, mockdata, een A
 en twee werkende schermen. Het merkconcept, de blauwdruk en de architectuur staan in de
 bijbehorende documenten (fase 1–3).
 
-> **`DATA_MODE=live`**: deze instantie haalt echte prijzen op bij Albert Heijn, Jumbo en
-> Lidl (onofficiële zoek-API's, zie `lib/providers/`). Zet terug op `mock` in `.env` voor
-> stabiele demodata. Draait op **Postgres (Neon)** — elke prijs met een `collected_at`.
+> **Echte data.** De app draait op de volledige online catalogus van Albert Heijn, Jumbo en Lidl
+> (crawlers + worker, zie "Volledige catalogus + worker"). Postgres (Neon) — elke prijs met een `collected_at`.
+> De mockdata bestaat alleen nog voor de tests en de voorbeeldbesparing op de homepage.
 
 ## Draaien
 
@@ -36,7 +36,10 @@ lokaal bestand — geen bevestigingsvraag.
 | `npm test` / `npm run typecheck` | Vitest (21) / `tsc --noEmit` |
 | `npm run db:reset` | schema opnieuw + opnieuw seeden (wist alles) |
 | `npm run db:studio` | Prisma Studio — de database bekijken |
-| `npm run ingest` | ingestion-worker: providers → database (mock, of AH/Jumbo/Lidl bij `DATA_MODE=live`) |
+| `npm run crawl` / `npm run worker` | eenmalig / doorlopend de winkelcatalogi ophalen (zie hieronder) |
+| `npm run regroup` | alle producten opnieuw in productgroepen indelen + EAN-samenvoeging (`-- --stats` = alleen cijfers) |
+| `npm run enrich-ean` | AH-producten van een EAN voorzien (hervatbaar; nodig om AH en Jumbo op barcode te matchen) |
+| `npm run purge-mock` | eenmalig: oude mockrijen uit de database halen |
 | `npm run check-alerts` | alert-trigger-job: prijsalerts tegen actuele prijzen, mailt de treffers (cron: elk uur) |
 | `npm run weekly-summary` | wekelijkse besparingssamenvatting per e-mail (cron: 1×/week) |
 
@@ -45,11 +48,10 @@ lokaal bestand — geen bevestigingsvraag.
 | Pad | Wat |
 | --- | --- |
 | `prisma/schema.prisma` | Volledig datamodel. Draait op **Postgres (Neon)**, portabel geschreven (werkte hiervoor ook op lokale SQLite zonder wijzigingen aan het schema zelf). |
-| `prisma/seed.ts` | Zet `lib/mock-data.ts` in de DB + demo-account met voorbeeldlijst. |
+| `prisma/seed.ts` | Winkels, categorieën en een demo-account met een lijst van echte producten (wist alleen gebruikersdata; catalogus komt uit de crawler). |
 | `lib/db.ts` | Prisma-client singleton. |
 | `auth.ts` / `auth.config.ts` / `middleware.ts` | Auth.js v5 — e-mail/wachtwoord-login, JWT-sessies, `/dashboard` · `/lijsten` · `/instellingen` afgeschermd. |
 | `app/inloggen` · `app/registreren` · `app/api/auth/*` | Login- en registratieschermen + endpoints. |
-| `lib/providers/*` + `scripts/ingest.ts` | `PriceProvider`-interface + `MockProvider` + de ingestion-worker. Echte connectors implementeren `PriceProvider`. |
 
 ## Lijsten (M1)
 
@@ -92,9 +94,6 @@ lokaal bestand — geen bevestigingsvraag.
 | `app/onboarding/page.tsx` | Postcode + straal + winkels in de buurt aanvinken → dashboard. Nieuwe accounts komen hier. |
 | `lib/favorites.ts` | Favoriet-toggle op productpagina, sectie op het dashboard. |
 | `app/api/me/export/route.ts` | Download al je gegevens als JSON (privacy-tab). |
-| `lib/providers/ah.ts` | **Echte Albert Heijn-connector** (token-auth + zoeken + `listAll` met trefwoord-matching). Actief bij `DATA_MODE=live`. |
-| `lib/providers/jumbo.ts` | **Echte Jumbo-connector** — onofficiële GraphQL-zoek-API (`apollographql-client-name`-header vereist, anders 401). Prijzen komen al in centen. |
-| `lib/providers/lidl.ts` | **Echte Lidl-connector** — onofficiële zoek-API (`/q/api/search`). Doorzoekt het hele assortiment; niet-boodschappen (categorie `Non Food` / `Assortiment/...`) worden eruit gefilterd. Geen losse stukprijs in de respons. |
 
 Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/api/compare`, `defaultBrandMode` bepaalt de merkkeuze van nieuwe lijstregels.
 
@@ -122,7 +121,7 @@ Voorkeuren werken door: `minExtraStoreSavingCents` gaat mee in `/vergelijk` + `/
 
 ## Volledige catalogus + worker (live prijzen en acties)
 
-Korf haalt het **hele assortiment** van de supermarkten binnen (alle merken en huismerken, prijzen, acties) en houdt dat bij met een worker. Dit vervangt de oude 65-producten-mockcatalogus (die wordt in een volgende stap uit de app gehaald).
+Korf haalt het **hele assortiment** van de supermarkten binnen (alle merken en huismerken, prijzen, acties) en houdt dat bij met een worker. Dit heeft de oude 65-producten-mockcatalogus vervangen (`npm run purge-mock` haalt de restanten uit de database).
 
 | Pad | Wat |
 | --- | --- |
@@ -133,6 +132,13 @@ Korf haalt het **hele assortiment** van de supermarkten binnen (alle merken en h
 | `lib/crawl/run.ts` | Eén ronde voor één winkel + logboek in de tabel `CrawlRun` (hoe vers, hoeveel, gelukt?). |
 | `scripts/crawl.ts` | `npm run crawl` · `-- --store=ah` · `-- --dry --limit=200` (niets opslaan). |
 | `scripts/worker.ts` | `npm run worker` — houdt alles vers, per winkel op een eigen ritme, met terugval bij fouten. `-- --once` voor cron/tests. |
+
+### Productgroepen en zoeken
+
+- **Groep = zelfde soort product in dezelfde hoeveelheid**, over alle winkels en alle merken/huismerken (`lib/crawl/group.ts`): sleutel = gesorteerde kernwoorden van de titel (zonder merk voor A-merken, zonder verpakking en stopwoorden) + hoeveelheid (`kg0.5`, `l1`, `st12`, multipack `x3`). Groepen zijn de "canonieke producten" waar lijsten, alerts en de vergelijker naar verwijzen.
+- **EAN-samenvoeging** (`mergeByEan`, na elke volledige crawl en `regroup`): producten met dezelfde barcode horen in dezelfde groep, ook als de winkels ze anders noemen. Jumbo levert een EAN mee, AH alleen via het detail-endpoint (`npm run enrich-ean`, ~40 min voor alle producten); Lidl heeft er geen.
+- **Zoeken** (`lib/catalog-search.ts`, `/producten`, `/api/products/search`): woorden op `searchText` (accentvrij titel + merk), een hoeveelheid in de zoekterm ("1 l") filtert op verpakking, filters op winkel/categorie/merk/A-merk↔huismerk/actie. Prijs = actieprijs als de actie loopt, anders schapprijs.
+- **Eerlijke status** (`/betrouwbaarheid`): per winkel het aantal producten en de laatste *volledige* run, rechtstreeks uit `CrawlRun`.
 
 **Ritme.** Geen enkele winkel heeft een "alleen aanbiedingen"-route (getest), dus elke verversing is een volledige scan van die winkel. Standaard: **AH elke 15 min, Jumbo elke 30, Lidl elke 60** (`CRAWL_INTERVAL_<WINKEL>_MIN` in `.env`). Een ronde kost AH ≈ 350 verzoeken (~2–3 min), Jumbo ≈ 1.000 (~4 min), Lidl ≈ 95 trage verzoeken (~4 min). Elke 5 minuten kan, maar is op onofficiële API's vragen om een blokkade — en prijzen veranderen hooguit een paar keer per dag (nieuwe acties meestal maandag).
 

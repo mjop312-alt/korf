@@ -21,20 +21,20 @@ export default async function DashboardPage() {
   const userId = await getUserId();
   if (!userId) redirect("/inloggen?callbackUrl=/dashboard");
 
-  const [user, active, lists, favorites, alerts, { catalog, supermarkets }, savingsHistory, lifetimeSavings] =
-    await Promise.all([
-      db.user.findUnique({ where: { id: userId }, select: { name: true } }),
-      getOrCreateActiveList(userId),
-      getLists(userId),
-      getFavorites(),
-      getMyAlerts(),
-      getCompareCatalog(),
-      getSavingsHistory(userId),
-      getLifetimeSavings(userId),
-    ]);
+  const [user, active, lists, favorites, alerts, savingsHistory, lifetimeSavings] = await Promise.all([
+    db.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    getOrCreateActiveList(userId),
+    getLists(userId),
+    getFavorites(),
+    getMyAlerts(),
+    getSavingsHistory(userId),
+    getLifetimeSavings(userId),
+  ]);
 
   const withItems = await getListWithItems(userId, active.id);
   const items = withItems ? toEngineItems(withItems.items) : [];
+  // alleen de groepen laden die op de actieve lijst staan
+  const { catalog, supermarkets } = await getCompareCatalog(items.map((i) => i.productId));
   const storeIds = await defaultStoreIds(userId, supermarkets.map((s) => s.id));
   const result = compareList(items, catalog, supermarkets, { storeIds, maxStoresBalanced: 2 });
   const best = result.balanced ?? result.cheapestSingle;

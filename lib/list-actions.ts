@@ -5,6 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { findGroupSlug } from "@/lib/catalog-search";
 import { db } from "@/lib/db";
 import { brandModeToDb, LIST_TEMPLATES } from "@/lib/list-map";
 import { getOrCreateActiveList, requireUserId } from "@/lib/lists";
@@ -28,7 +29,9 @@ export async function createList(formData: FormData) {
   });
 
   if (templateKey && LIST_TEMPLATES[templateKey]) {
-    const slugs = LIST_TEMPLATES[templateKey].slugs;
+    // elke zoekterm van het sjabloon → de best passende productgroep (dubbelen weglaten)
+    const found = await Promise.all(LIST_TEMPLATES[templateKey].terms.map((t) => findGroupSlug(db, t)));
+    const slugs = [...new Set(found.filter((x): x is string => !!x))];
     const products = await db.canonicalProduct.findMany({ where: { slug: { in: slugs } } });
     const bySlug = new Map(products.map((p) => [p.slug, p]));
     await db.shoppingListItem.createMany({

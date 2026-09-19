@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ListBuilder } from "@/components/list-builder";
 import { ShareListDialog } from "@/components/share-list-dialog";
+import { useProductCache } from "@/components/use-product-cache";
 import { isBrandModeAvailable } from "@/lib/catalog";
 import {
   addItemBySlug,
@@ -16,8 +17,7 @@ import {
   setListStores,
   updateItem,
 } from "@/lib/list-actions";
-import { CATALOG } from "@/lib/mock-data";
-import type { BrandMode, ListItem } from "@/lib/types";
+import type { BrandMode, CanonicalProduct, ListItem } from "@/lib/types";
 import { useActionQueue } from "@/lib/use-action-queue";
 
 type Summary = { id: string; name: string; isActive: boolean };
@@ -25,11 +25,13 @@ type Summary = { id: string; name: string; isActive: boolean };
 export function ListEditor({
   list,
   initialItems,
+  initialProducts,
   initialStores,
   otherLists,
 }: {
   list: Summary;
   initialItems: ListItem[];
+  initialProducts: CanonicalProduct[];
   initialStores: string[];
   otherLists: { id: string; name: string; count: number }[];
 }) {
@@ -47,6 +49,7 @@ export function ListEditor({
     }
   }, [itemsKey, initialItems]);
 
+  const { products, learn } = useProductCache(initialProducts);
   const [stores, setStores] = useState(initialStores);
   const [note, setNote] = useState<string | null>(null);
 
@@ -89,7 +92,7 @@ export function ListEditor({
   // merkkeuzes die niet meer kunnen bij de gekozen winkels → terug naar "maakt niet uit" (ook op de server)
   useEffect(() => {
     const impossible = items.filter((it) => {
-      const p = CATALOG.find((c) => c.id === it.productId);
+      const p = products[it.productId];
       return p && !isBrandModeAvailable(it.brandMode, p, stores);
     });
     if (!impossible.length) return;
@@ -168,6 +171,8 @@ export function ListEditor({
       <ListBuilder
         items={items}
         stores={stores}
+        products={products}
+        onLearn={learn}
         onAdd={add}
         onPatch={patch}
         onRemove={remove}

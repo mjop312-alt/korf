@@ -8,6 +8,9 @@ export function SiteHeader() {
         k<span className="font-medium">or</span>f<span className="text-brass">.</span>
       </Link>
       <nav className="flex items-center gap-5 text-sm">
+        <Link href="/producten" className="hidden text-muted hover:text-ink sm:inline">
+          Producten
+        </Link>
         <Link href="/aanbiedingen" className="hidden text-muted hover:text-ink sm:inline">
           Aanbiedingen
         </Link>
@@ -32,7 +35,7 @@ export function SiteFooter() {
         <Link href="/over" className="hover:text-ink">Over Korf</Link>
         <Link href="/privacy" className="hover:text-ink">Privacy</Link>
         <Link href="/voorwaarden" className="hover:text-ink">Voorwaarden</Link>
-        <span className="ml-auto">Demo- en mockdata tenzij een echte databron is aangesloten.</span>
+        <span className="ml-auto">Prijzen via onofficiële winkelcatalogi; zie Betrouwbaarheid.</span>
       </div>
     </footer>
   );

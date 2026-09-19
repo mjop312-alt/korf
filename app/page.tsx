@@ -55,7 +55,7 @@ export default function Home() {
             </Link>
           </div>
           <p className="mt-4 font-mono text-xs text-muted">
-            Demodata — geen actuele prijzen. <Link href="/betrouwbaarheid" className="text-brass underline underline-offset-2">Hoe Korf aan data komt</Link>
+            Prijzen komen uit de winkelcatalogi. <Link href="/betrouwbaarheid" className="text-brass underline underline-offset-2">Hoe Korf aan data komt</Link>
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export default function Home() {
       {/* ── voorbeeldbesparing (echt doorgerekend) ── */}
       <section className="border-y border-line bg-sunken">
         <div className="mx-auto max-w-6xl px-6 py-20">
-          <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Voorbeeld · demodata</p>
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Voorbeeld · voorbeeldprijzen</p>
           <h2 className="mt-3 max-w-xl font-display text-3xl font-light text-ink">
             Dezelfde lijst, drie manieren om ’m te halen.
           </h2>

@@ -5,6 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 import { ahCrawler } from "./ah";
 import { jumboCrawler } from "./jumbo";
 import { lidlCrawler } from "./lidl";
+import { mergeByEan } from "./groups";
 import { markMissing, persistBatch, supermarketId } from "./store";
 import type { CrawledProduct, Crawler, StoreSlug } from "./types";
 
@@ -97,6 +98,7 @@ export async function crawlStore(db: PrismaClient, slug: StoreSlug, opts: RunOpt
       res.markedGone = m.marked;
       res.partial = m.skipped; // te weinig producten gezien ⇒ deze ronde is niet volledig
       await db.supermarket.update({ where: { id: smId }, data: { dataProvider: slug } });
+      await mergeByEan(db);
     }
     res.ok = true;
   } catch (e) {

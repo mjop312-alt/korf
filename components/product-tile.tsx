@@ -1,21 +1,25 @@
+import { TileImage } from "@/components/tile-image";
 import { accentFor, glyphFor, type TileProduct } from "@/lib/product-visuals";
 
 /**
- * Placeholder-productafbeelding. Toont de categorie-glyph + het merk, met een
- * subtiele merk-tint. `brand === null` ⇒ "geen voorkeur".
- * In productie vervangt <img src={imageUrl}> deze tegel (of next/image).
+ * Productafbeelding. Met een echte foto (`imageUrl`, uit de winkelcatalogus) toont hij die;
+ * zonder foto — of als die niet laadt — een gegenereerde tegel: categorie-glyph + merk, met
+ * een subtiele merk-tint. `brand === null` ⇒ "geen voorkeur".
  */
 export function ProductTile({
   product,
   brand,
   size = 54,
+  imageUrl,
 }: {
   product: TileProduct;
   brand: string | null;
   size?: number;
+  imageUrl?: string | null;
 }) {
   const accent = accentFor(brand);
   const neutral = brand === null;
+  const photo = imageUrl ?? (product as { imageUrl?: string }).imageUrl ?? null;
   return (
     <div
       className="relative flex-none overflow-hidden rounded-xl border border-line transition-colors"
@@ -39,6 +43,7 @@ export function ProductTile({
       >
         {neutral ? <span className="lowercase italic text-muted">geen voorkeur</span> : brand}
       </div>
+      {photo && <TileImage src={photo} alt="" />}
     </div>
   );
 }

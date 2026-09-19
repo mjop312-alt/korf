@@ -8,6 +8,7 @@ import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { freshnessLabel, getCompareCatalog } from "@/lib/catalog-db";
 import { compareList, formatEuro } from "@/lib/compare";
 import { db } from "@/lib/db";
+import { getDemoList } from "@/lib/demo-list";
 import { getListWithItems, getUserId, toEngineItems } from "@/lib/lists";
 import type { BrandMode, CompareResult, ListItem, Scenario, StoreId } from "@/lib/types";
 import { ReceiptCopyButton } from "./receipt-copy";
@@ -15,16 +16,6 @@ import { StoreSelector } from "./store-selector";
 
 export const dynamic = "force-dynamic";
 
-const DEMO_LIST: ListItem[] = [
-  { id: "1", productId: "melk", quantity: 2, brandMode: "any" },
-  { id: "2", productId: "koffie", quantity: 1, brandMode: "any" },
-  { id: "3", productId: "chips", quantity: 2, brandMode: "any" },
-  { id: "4", productId: "wasmiddel", quantity: 1, brandMode: "any" },
-  { id: "5", productId: "jus", quantity: 1, brandMode: "any" },
-  { id: "6", productId: "roomboter", quantity: 1, brandMode: "any" },
-  { id: "7", productId: "pindakaas", quantity: 1, brandMode: { brand: "Calvé" } },
-  { id: "8", productId: "kipfilet", quantity: 1, brandMode: "any" },
-];
 
 const SCENARIOS = [
   { key: "cheapestSingle", tag: "Scenario A", title: "Goedkoopste winkel", blurb: "Alles bij één supermarkt." },
@@ -42,19 +33,11 @@ export default async function VergelijkPage({
   searchParams: Promise<{ winkels?: string; scenario?: string; lijst?: string }>;
 }) {
   const sp = await searchParams;
-  const { catalog, supermarkets, freshness } = await getCompareCatalog();
-  const allStoreIds = supermarkets.map((s) => s.id);
-  const storeName = (id: StoreId) => supermarkets.find((s) => s.id === id)?.name ?? id;
-  const storeShort = (id: StoreId) => supermarkets.find((s) => s.id === id)?.short ?? id;
-
-  const selected = sp.winkels?.split(",").filter((id) => allStoreIds.includes(id)) ?? allStoreIds;
-  const storeIds = selected.length ? selected : allStoreIds;
-
   const userId = await getUserId();
 
-  // lijst
+  // lijst: je eigen lijst, of een voorbeeldlijst uit echte producten
   let listName: string | null = null;
-  let items = DEMO_LIST;
+  let items: ListItem[] = [];
   if (sp.lijst) {
     const list = userId ? await getListWithItems(userId, sp.lijst) : null;
     if (list) {
@@ -62,6 +45,15 @@ export default async function VergelijkPage({
       items = toEngineItems(list.items);
     }
   }
+  if (!listName) items = await getDemoList();
+
+  const { catalog, supermarkets, freshness } = await getCompareCatalog(items.map((i) => i.productId));
+  const allStoreIds = supermarkets.map((s) => s.id);
+  const storeName = (id: StoreId) => supermarkets.find((s) => s.id === id)?.name ?? id;
+  const storeShort = (id: StoreId) => supermarkets.find((s) => s.id === id)?.short ?? id;
+
+  const selected = sp.winkels?.split(",").filter((id) => allStoreIds.includes(id)) ?? allStoreIds;
+  const storeIds = selected.length ? selected : allStoreIds;
 
   const pref = userId
     ? await db.userPreference.findUnique({ where: { userId }, select: { minExtraStoreSavingCents: true } })
@@ -115,7 +107,6 @@ export default async function VergelijkPage({
         ...receiptLines.map((l) => `${storeName(l.store).padEnd(16)} ${formatEuro(l.cents)}`),
         `${"Totaal".padEnd(16)} ${formatEuro(active.totalCents)}`,
         `Bespaard t.o.v. ${result.referenceLabel}: ${formatEuro(active.savingCents)}`,
-        `demodata — geen actuele prijzen`,
       ].join("\n")
     : "";
 
@@ -136,7 +127,7 @@ export default async function VergelijkPage({
               {" · "}
             </>
           )}
-          Demodata. Prijzen {overall.text}.
+          Prijzen {overall.text}.
         </p>
 
         {staleStores.length > 0 && (

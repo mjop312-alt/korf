@@ -1,5 +1,6 @@
 // Lees-kant van aanbiedingen en productdetail. Server components.
 
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export interface OfferView {
@@ -17,55 +18,57 @@ export interface OfferView {
   pctOff: number | null;
 }
 
-export async function getOffers(opts: { store?: string; category?: string } = {}): Promise<OfferView[]> {
-  const now = new Date();
-  const prices = await db.price.findMany({
-    where: {
-      isPromo: true,
-      promotion: { endsAt: { gte: now } },
-      storeProduct: {
-        // de volledige crawl-catalogus heeft (nog) geen canoniek product; die horen hier niet bij
-        canonicalProductId: { not: null },
-        ...(opts.store ? { supermarket: { slug: opts.store } } : {}),
-        ...(opts.category ? { canonicalProduct: { category: { slug: opts.category } } } : {}),
-      },
-    },
-    include: {
-      promotion: true,
-      storeProduct: {
-        include: {
-          brand: true,
-          supermarket: true,
-          canonicalProduct: { include: { category: true } },
-        },
-      },
-    },
-  });
+export const OFFERS_PAGE_SIZE = 30;
 
-  return prices
-    .filter((p) => p.storeProduct.canonicalProduct)
-    .map((p) => {
-      const cp = p.storeProduct.canonicalProduct!;
-      const promoCents = p.promoPriceCents ?? null;
-      return {
-        canonicalSlug: cp.slug,
-        productName: cp.name,
-        category: cp.category.name,
-        storeSlug: p.storeProduct.supermarket.slug,
-        storeName: p.storeProduct.supermarket.name,
-        storeColor: p.storeProduct.supermarket.brandColor,
-        brand: p.storeProduct.brand.name,
-        normalCents: p.priceCents,
-        promoCents,
-        label: p.promotion!.label,
-        endsAt: p.promotion!.endsAt.toISOString(),
-        pctOff:
-          promoCents != null && p.priceCents > 0
-            ? Math.round((1 - promoCents / p.priceCents) * 100)
-            : null,
-      };
-    })
-    .sort((a, b) => (b.pctOff ?? 0) - (a.pctOff ?? 0));
+/** Lopende aanbiedingen, met de hoogste korting (%) eerst; gepagineerd. */
+export async function getOffers(
+  opts: { store?: string; category?: string; page?: number } = {},
+): Promise<{ total: number; offers: OfferView[] }> {
+  const page = Math.max(opts.page ?? 1, 1);
+  const where = [
+    Prisma.sql`pr."isPromo" AND pr."promoPriceCents" IS NOT NULL AND pm."endsAt" >= now()`,
+    Prisma.sql`sp.available AND sp."canonicalProductId" IS NOT NULL`,
+  ];
+  if (opts.store) where.push(Prisma.sql`s.slug = ${opts.store}`);
+  if (opts.category) where.push(Prisma.sql`c.slug = ${opts.category}`);
+
+  const rows = await db.$queryRaw<
+    {
+      slug: string; name: string; category: string; store_slug: string; store_name: string; store_color: string;
+      brand: string; normal: number; promo: number; label: string; ends: Date; total: number;
+    }[]
+  >`
+    SELECT cp.slug, cp.name, c.name AS category, s.slug AS store_slug, s.name AS store_name, s."brandColor" AS store_color,
+           b.name AS brand, pr."priceCents" AS normal, pr."promoPriceCents" AS promo, pm.label, pm."endsAt" AS ends,
+           (COUNT(*) OVER())::int AS total
+    FROM "Price" pr
+    JOIN "Promotion" pm ON pm.id = pr."promotionId"
+    JOIN "StoreProduct" sp ON sp.id = pr."storeProductId"
+    JOIN "Supermarket" s ON s.id = sp."supermarketId"
+    JOIN "Brand" b ON b.id = sp."brandId"
+    JOIN "CanonicalProduct" cp ON cp.id = sp."canonicalProductId"
+    JOIN "Category" c ON c.id = cp."categoryId"
+    WHERE ${Prisma.join(where, " AND ")}
+    ORDER BY (1 - pr."promoPriceCents"::float / NULLIF(pr."priceCents", 0)) DESC NULLS LAST, cp.name
+    LIMIT ${OFFERS_PAGE_SIZE} OFFSET ${(page - 1) * OFFERS_PAGE_SIZE}`;
+
+  return {
+    total: rows[0]?.total ?? 0,
+    offers: rows.map((r) => ({
+      canonicalSlug: r.slug,
+      productName: r.name,
+      category: r.category,
+      storeSlug: r.store_slug,
+      storeName: r.store_name,
+      storeColor: r.store_color,
+      brand: r.brand,
+      normalCents: r.normal,
+      promoCents: r.promo,
+      label: r.label,
+      endsAt: r.ends.toISOString(),
+      pctOff: r.normal > 0 ? Math.round((1 - r.promo / r.normal) * 100) : null,
+    })),
+  };
 }
 
 export async function getOfferFilters() {

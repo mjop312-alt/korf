@@ -23,7 +23,10 @@
     "check-alerts": "tsx scripts/check-alerts.ts",
     "weekly-summary": "tsx scripts/weekly-summary.ts",
     "crawl": "tsx scripts/crawl.ts",
-    "worker": "tsx scripts/worker.ts"
+    "worker": "tsx scripts/worker.ts",
+    "regroup": "tsx scripts/regroup.ts",
+    "enrich-ean": "tsx scripts/enrich-ean.ts",
+    "purge-mock": "tsx scripts/purge-mock.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.0",

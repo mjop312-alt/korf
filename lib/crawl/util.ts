@@ -48,36 +48,53 @@ export function weekEnd(from = new Date()): Date {
   return d;
 }
 
+export interface Pack {
+  /** Totale hoeveelheid in de basiseenheid. */
+  size: number;
+  unit: "kg" | "litre" | "piece";
+  /** Aantal verpakkingen in een multipack ("3 x 200 ml" → 3); anders 1. */
+  count: number;
+}
+
+const PACK_RE = /(?:(\d+)\s*[x×]\s*)?(\d+(?:\.\d+)?)\s*(kg|gram|g|liter|litre|l|cl|ml|stuks|stuk|st)\b/;
+
 /**
  * Verpakkingstekst → hoeveelheid in basiseenheid (kg / litre / piece).
  * "6 x 1 L" → 6 l · "2 x 500 g" → 1 kg · "330 ml" → 0,33 l · "12 stuks" → 12 piece.
  */
-export function parsePack(label: string | null | undefined): { size: number; unit: "kg" | "litre" | "piece" } | null {
+export function parsePack(label: string | null | undefined): Pack | null {
   if (!label) return null;
-  const m = label
-    .toLowerCase()
-    .replace(/,/g, ".")
-    .match(/(?:(\d+)\s*[x×]\s*)?(\d+(?:\.\d+)?)\s*(kg|gram|g|liter|litre|l|cl|ml|stuks|stuk|st)\b/);
+  const m = label.toLowerCase().replace(/,/g, ".").match(PACK_RE);
   if (!m) return null;
-  const mult = m[1] ? parseInt(m[1], 10) : 1;
-  const value = parseFloat(m[2]) * mult;
+  const count = m[1] ? parseInt(m[1], 10) : 1;
+  const value = parseFloat(m[2]) * count;
   switch (m[3]) {
     case "kg":
-      return { size: value, unit: "kg" };
+      return { size: value, unit: "kg", count };
     case "g":
     case "gram":
-      return { size: value / 1000, unit: "kg" };
+      return { size: value / 1000, unit: "kg", count };
     case "l":
     case "liter":
     case "litre":
-      return { size: value, unit: "litre" };
+      return { size: value, unit: "litre", count };
     case "cl":
-      return { size: value / 100, unit: "litre" };
+      return { size: value / 100, unit: "litre", count };
     case "ml":
-      return { size: value / 1000, unit: "litre" };
+      return { size: value / 1000, unit: "litre", count };
     default:
-      return { size: value, unit: "piece" };
+      return { size: value, unit: "piece", count };
   }
+}
+
+/**
+ * EAN/GTIN in één vorm: alleen cijfers, 13 lang. AH geeft GTIN-14 met voorloopnul
+ * ("08710400200833"), Jumbo EAN-13 ("8710400200833") — beide worden "8710400200833".
+ */
+export function normalizeEan(raw: string | number | null | undefined): string | null {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (digits.length < 8 || digits.length > 14) return null;
+  return digits.padStart(14, "0").slice(-13);
 }
 
 /** "2026-09-22" of ISO met "[Europe/Amsterdam]"-suffix (Jumbo) → Date; ongeldig ⇒ null. */

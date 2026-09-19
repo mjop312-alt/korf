@@ -51,7 +51,7 @@ export default function OverPage() {
               <p>
                 Korf is een persoonlijk/demonstratieproject in ontwikkeling, geen geregistreerd bedrijf.
                 Zie <Link href="/betrouwbaarheid" className="text-brass underline underline-offset-2">Betrouwbaarheid</Link>{" "}
-                voor precies welke winkels op dit moment live data leveren en welke nog demodata tonen.
+                voor wanneer elke winkel voor het laatst is opgehaald.
               </p>
             }
           />

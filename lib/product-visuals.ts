@@ -9,30 +9,38 @@ import type { BrandMode, CanonicalProduct, ListItem, StoreId } from "./types";
 export type TileProduct = Pick<CanonicalProduct, "id" | "name" | "category">;
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  "groente & fruit": "🥬", zuivel: "🥛", "vlees & vis": "🍗",
-  "brood & bakkerij": "🥖", "brood & beleg": "🫙", diepvries: "❄️",
-  dranken: "🥤", snacks: "🍫", "persoonlijke verzorging": "🧴", schoonmaak: "🧽",
+  diepvries: "❄️",
+  "groente & fruit": "🥬",
+  "zuivel, kaas & eieren": "🥛",
+  "vlees, vis & vega": "🍗",
+  "brood & bakkerij": "🥖",
+  dranken: "🥤",
+  "snacks & zoet": "🍫",
+  "maaltijden & kruidenier": "🍝",
+  "verzorging & gezondheid": "🧴",
+  huishouden: "🧽",
+  huisdier: "🐕",
+  overig: "🛒",
 };
 
-const PRODUCT_EMOJI: Record<string, string> = {
-  melk: "🥛", eieren: "🥚", roomboter: "🧈", yoghurt: "🥣", vla: "🍮", "jonge-kaas": "🧀",
-  slagroom: "🥛", kwark: "🥣", halvarine: "🧈",
-  bananen: "🍌", appels: "🍎", trostomaten: "🍅", komkommer: "🥒", paprika: "🫑",
-  ijsbergsla: "🥬", wortelen: "🥕", uien: "🧅", sinaasappels: "🍊", aardappelen: "🥔",
-  champignons: "🍄", avocado: "🥑",
-  kipfilet: "🍗", gehakt: "🥩", rundergehakt: "🥩", spekreepjes: "🥓", zalmfilet: "🐟", vegaburger: "🍔",
-  brood: "🍞", bolletjes: "🥐", croissants: "🥐", crackers: "🍘", beschuit: "🍘",
-  pindakaas: "🥜", hagelslag: "🍫", jam: "🍓", chocopasta: "🍫", "kipfilet-vleeswaren": "🍗",
-  pizza: "🍕", frites: "🍟", "spinazie-diepvries": "🥬", roomijs: "🍨", kipnuggets: "🍗",
-  jus: "🍊", spa: "💧", cola: "🥤", appelsap: "🧃", thee: "🍵", koffie: "☕", bier: "🍺",
-  chips: "🥔", chocolade: "🍫", stroopwafels: "🧇", "pinda-noten": "🥜", drop: "🍬",
-  tandpasta: "🪥", shampoo: "🧴", douchegel: "🧴", deodorant: "💨", toiletpapier: "🧻",
-  wasmiddel: "🧴", afwasmiddel: "🧴", allesreiniger: "🧴", vaatwastabletten: "🧼",
-  keukenrol: "🧻", vuilniszakken: "🗑️",
-};
+// Woorden in de productnaam die een specifiekere emoji verdienen dan de categorie.
+const WORD_EMOJI: [string, string][] = [
+  ["melk", "🥛"], ["yoghurt", "🥣"], ["kwark", "🥣"], ["boter", "🧈"], ["kaas", "🧀"], ["ei", "🥚"], ["eieren", "🥚"],
+  ["banaan", "🍌"], ["bananen", "🍌"], ["appel", "🍎"], ["tomaat", "🍅"], ["tomaten", "🍅"], ["komkommer", "🥒"],
+  ["paprika", "🫑"], ["wortel", "🥕"], ["aardappel", "🥔"], ["ui", "🧅"], ["sinaasappel", "🍊"], ["avocado", "🥑"],
+  ["kip", "🍗"], ["gehakt", "🥩"], ["zalm", "🐟"], ["vis", "🐟"], ["spek", "🥓"],
+  ["brood", "🍞"], ["croissant", "🥐"], ["pindakaas", "🥜"], ["hagelslag", "🍫"], ["jam", "🍓"],
+  ["pizza", "🍕"], ["friet", "🍟"], ["ijs", "🍨"], ["cola", "🥤"], ["sap", "🧃"], ["thee", "🍵"], ["koffie", "☕"],
+  ["bier", "🍺"], ["pils", "🍺"], ["wijn", "🍷"], ["water", "💧"], ["chips", "🥔"], ["chocolade", "🍫"],
+  ["stroopwafel", "🧇"], ["noten", "🥜"], ["drop", "🍬"], ["tandpasta", "🪥"], ["shampoo", "🧴"],
+  ["toiletpapier", "🧻"], ["keukenrol", "🧻"], ["afwasmiddel", "🧴"], ["wasmiddel", "🧴"],
+  ["pasta", "🍝"], ["spaghetti", "🍝"], ["rijst", "🍚"], ["soep", "🍲"],
+];
 
 export function glyphFor(product: TileProduct): string {
-  return PRODUCT_EMOJI[product.id] ?? CATEGORY_EMOJI[product.category] ?? "🛒";
+  const name = product.name.toLowerCase();
+  const hit = WORD_EMOJI.find(([w]) => name.split(/[^a-zà-ÿ]+/).some((word) => word === w || (w.length > 3 && word.startsWith(w))));
+  return hit?.[1] ?? CATEGORY_EMOJI[product.category.toLowerCase()] ?? "🛒";
 }
 
 const BRAND_ACCENT: Record<string, string> = {

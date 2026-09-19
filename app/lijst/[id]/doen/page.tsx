@@ -32,11 +32,11 @@ export default async function DoenPage({
   const list = await getListWithItems(userId, id);
   if (!list) notFound();
 
-  const { catalog, supermarkets } = await getCompareCatalog();
+  const items = toEngineItems(list.items);
+  const { catalog, supermarkets } = await getCompareCatalog(items.map((i) => i.productId));
   const allStoreIds = supermarkets.map((s) => s.id);
   const storeIds = sp.winkels?.split(",").filter((s) => allStoreIds.includes(s)) ?? allStoreIds;
 
-  const items = toEngineItems(list.items);
   const result = compareList(items, catalog, supermarkets, { storeIds, maxStoresBalanced: 2 });
 
   const requested = SCENARIO_KEYS.includes(sp.scenario as ScenarioKey) ? (sp.scenario as ScenarioKey) : null;
@@ -58,7 +58,8 @@ export default async function DoenPage({
         const cell = r.perStore[storeId];
         return {
           id: r.itemId,
-          label: r.label,
+          // in het schap zoek je het echte artikel, niet de generieke groepsnaam
+          label: cell && !("missing" in cell) ? cell.title : r.label,
           quantity: r.quantity,
           brandMode: r.brandMode,
           priceCents: cell && !("missing" in cell) ? cell.lineCents : null,

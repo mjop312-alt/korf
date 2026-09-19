@@ -114,7 +114,7 @@ export default function HoeHetWerktPage() {
           <h2 className="font-display text-3xl font-light text-ink">De drie winkelstrategieën</h2>
           <p className="mt-3 max-w-2xl text-sm text-muted">
             Dit is de kern van Korf. Hieronder een <strong>echt doorgerekend</strong> voorbeeld op
-            demodata: een lijst van {EXAMPLE.length} producten, vergeleken over Albert Heijn, Jumbo en Lidl.
+            voorbeeld met voorbeeldprijzen: een lijst van {EXAMPLE.length} producten, vergeleken over Albert Heijn, Jumbo en Lidl.
           </p>
 
           {/* per winkel */}
@@ -182,8 +182,8 @@ export default function HoeHetWerktPage() {
             {[
               ["Kost het geld?", "Nee. Korf is gratis te gebruiken en toont een onafhankelijk overzicht — geen supermarkt betaalt voor een betere plek."],
               ["Heb ik een account nodig?", "Om te vergelijken niet. Een account heb je alleen nodig om je lijsten en je besparingsteller te bewaren."],
-              ["Welke supermarkten?", "In deze versie Albert Heijn, Jumbo en Lidl (demodata). De opzet is gemaakt om later Plus, Dirk, Aldi, Coop, Picnic en meer toe te voegen."],
-              ["Zijn de prijzen actueel?", "In deze demo niet — het zijn realistische voorbeeldprijzen. Bij elke prijs staat straks wanneer die voor het laatst is gecontroleerd."],
+              ["Welke supermarkten?", "In deze versie Albert Heijn, Jumbo en Lidl . De opzet is gemaakt om later Plus, Dirk, Aldi, Coop, Picnic en meer toe te voegen."],
+              ["Zijn de prijzen actueel?", "Ze worden automatisch opgehaald bij de winkels; hoe vaak en wanneer voor het laatst, zie je op de pagina Betrouwbaarheid. Een winkelprijs kan tussentijds veranderen."],
               ["Kan ik een lijst delen?", "Ja. Je kunt een lijst opslaan, dupliceren en delen; de ontvanger krijgt een kopie of een alleen-lezen link."],
               ["Werkt het op mijn telefoon?", "Ja, mobiel is de hoofdvorm. Onderin zie je altijd je lopende totaal en de knop om te vergelijken."],
             ].map(([q, a]) => (

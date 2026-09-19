@@ -30,6 +30,10 @@ export interface StoreProduct {
   /** Echte productfoto bij de winkelbron. Ontbreekt in de mockdata; de UI valt dan
    *  terug op een gegenereerde tegel (zie lib/product-visuals.ts). */
   imageUrl?: string;
+  /** Echte titel, verpakkingstekst en productlink van het winkelartikel (uit de crawl). */
+  title?: string;
+  packLabel?: string;
+  url?: string;
 }
 
 /** Het canonieke product waar winkelvarianten aan hangen. */
@@ -73,6 +77,9 @@ export interface Candidate {
   unitPriceCents: number | null;
   promo: Promotion | null;
   lineCents: number;
+  packLabel?: string | null;
+  url?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface MissingCell {

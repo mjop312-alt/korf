@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-chrome";
+import { loadGroups } from "@/lib/catalog-db";
 import { db } from "@/lib/db";
 import { getListWithItems, getLists, getUserId, toEngineItems } from "@/lib/lists";
 import { SUPERMARKETS } from "@/lib/mock-data";
@@ -21,6 +22,9 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
     db.userPreference.findUnique({ where: { userId } }),
   ]);
 
+  const items = toEngineItems(list.items);
+  const initialProducts = await loadGroups(items.map((i) => i.productId));
+
   const allStoreIds = SUPERMARKETS.map((s) => s.id);
   const listStores = (list.storeIds as string[] | null)?.filter((s) => allStoreIds.includes(s)) ?? null;
   const prefStores = (pref?.selectedStoreIds as string[] | null) ?? null;
@@ -35,7 +39,8 @@ export default async function ListDetailPage({ params }: { params: Promise<{ id:
       <SiteHeader />
       <ListEditor
         list={{ id: list.id, name: list.name, isActive: list.isActive }}
-        initialItems={toEngineItems(list.items)}
+        initialItems={items}
+        initialProducts={initialProducts}
         initialStores={initialStores}
         otherLists={lists
           .filter((l) => l.id !== list.id)

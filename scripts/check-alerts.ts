@@ -5,7 +5,7 @@
 // Controleert elke opgeslagen prijsalert tegen de actuele prijzen in de database.
 // Bij een treffer: stuurt een e-mail (als de gebruiker prijsalert-meldingen aan heeft
 // staan) en zet `lastTriggeredAt` zodat dezelfde alert niet elk uur opnieuw afgaat.
-// Draai dit periodiek via cron (bv. elk uur), net als scripts/ingest.ts.
+// Draai dit periodiek via cron (bv. elk uur), net als npm run worker.
 //
 // Zonder RESEND_API_KEY wordt er geen echte mail verstuurd — dan logt lib/email.ts
 // alleen wat er verstuurd zou zijn (dry-run).

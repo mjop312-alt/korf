@@ -1,10 +1,10 @@
 // /betrouwbaarheid — hoe Korf aan data komt, wat wel en niet is meegerekend,
-// en de huidige status (mock vs. live). Server component, statisch.
+// en de huidige status per winkel, rechtstreeks uit het crawl-logboek (CrawlRun).
 
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
-import { SUPERMARKETS } from "@/lib/mock-data";
+import { getCrawlStatus } from "@/lib/crawl-status";
 
 export const metadata: Metadata = {
   title: "Betrouwbaarheid — Korf",
@@ -12,16 +12,7 @@ export const metadata: Metadata = {
     "Waar Korf zijn prijzen vandaan haalt, hoe actueel ze zijn, wat wel en niet is meegerekend, en hoe de besparing wordt berekend.",
 };
 
-// Weerspiegelt DATA_MODE (zie lib/providers/index.ts) — "live" betekent dat de
-// ingestion-worker (npm run ingest) écht bij AH/Jumbo/Lidl heeft opgehaald.
-const isLive = process.env.DATA_MODE === "live";
-const DATA_STATUS = SUPERMARKETS.map((s) => ({
-  name: s.name,
-  mode: (isLive ? "live" : "demo") as "demo" | "live",
-  note: isLive
-    ? "onofficiële zoek-API, periodiek opgehaald — geen bonuskaart-/winkelspecifieke prijzen"
-    : "voorbeeldprijzen, niet actueel",
-}));
+export const dynamic = "force-dynamic";
 
 function Row({ q, a }: { q: string; a: React.ReactNode }) {
   return (
@@ -32,7 +23,8 @@ function Row({ q, a }: { q: string; a: React.ReactNode }) {
   );
 }
 
-export default function BetrouwbaarheidPage() {
+export default async function BetrouwbaarheidPage() {
+  const status = await getCrawlStatus();
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
@@ -51,40 +43,33 @@ export default function BetrouwbaarheidPage() {
         <div className="mt-10 rounded-2xl border border-brass bg-brass-wash p-5">
           <p className="font-mono text-xs uppercase tracking-widest text-brass">Huidige status</p>
           <p className="mt-2 text-sm text-text">
-            {isLive ? (
-              <>
-                Deze versie haalt <strong>echte prijzen</strong> op bij Albert Heijn, Jumbo en Lidl via
-                hun (onofficiële) zoek-API's. Geen bonuskaart- of winkelspecifieke kortingen, en
-                matching gebeurt op trefwoord — af en toe kan dat een net iets andere variant treffen.
-              </>
-            ) : (
-              <>
-                Deze versie draait volledig op <strong>demodata</strong>. De prijzen zijn realistisch
-                gekozen, maar <strong>niet actueel</strong> en niet van een supermarkt afkomstig. Zodra
-                een echte databron is aangesloten, verdwijnt deze melding voor die winkel.
-              </>
-            )}
+            Korf haalt de <strong>volledige online catalogus</strong> van Albert Heijn, Jumbo en Lidl op en
+            ververst die automatisch. Hieronder staat per winkel wanneer dat voor het laatst gelukt is. De
+            bronnen zijn <strong>onofficiële</strong> webshop-API&rsquo;s: geen bonuskaart- of
+            winkelspecifieke prijzen, en een winkel kan de toegang op elk moment dichtzetten.
           </p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="font-mono text-[0.62rem] uppercase tracking-wider text-muted">
                   <th className="py-2 pr-4 text-left font-medium">Supermarkt</th>
-                  <th className="py-2 pr-4 text-left font-medium">Bron</th>
+                  <th className="py-2 pr-4 text-left font-medium">Producten</th>
+                  <th className="py-2 pr-4 text-left font-medium">Laatste volledige run</th>
                   <th className="py-2 text-left font-medium">Toelichting</th>
                 </tr>
               </thead>
               <tbody>
-                {DATA_STATUS.map((d) => (
-                  <tr key={d.name} className="border-t border-brass/30">
+                {status.map((d) => (
+                  <tr key={d.slug} className="border-t border-brass/30 align-top">
                     <td className="py-2 pr-4 text-ink">{d.name}</td>
+                    <td className="py-2 pr-4 font-mono tabular-nums">{d.products.toLocaleString("nl-NL")}</td>
                     <td className="py-2 pr-4">
                       <span
                         className={`rounded-full border px-2 py-0.5 font-mono text-[0.6rem] uppercase ${
-                          d.mode === "demo" ? "border-brass text-brass" : "border-sage text-sage"
+                          d.fresh ? "border-sage text-sage" : "border-brass text-brass"
                         }`}
                       >
-                        {d.mode === "demo" ? "Demodata" : "Live"}
+                        {d.lastFullLabel}
                       </span>
                     </td>
                     <td className="py-2 text-muted">{d.note}</td>
@@ -102,15 +87,16 @@ export default function BetrouwbaarheidPage() {
             a={
               <>
                 <p>
-                  In productie leest Korf prijzen uit <strong>officiële API&rsquo;s en partnerfeeds</strong>{" "}
-                  van de supermarkten, aangevuld met handmatige controle. Een achtergrondproces haalt
-                  ze periodiek op en zet ze in onze database — de website doet nooit tijdens jouw
-                  bezoek een verzoek aan een supermarkt.
+                  Een achtergrondproces (de <em>worker</em>) leest de webshop-catalogus van elke winkel
+                  periodiek in en zet die in onze database — de website doet nooit tijdens jouw bezoek
+                  een verzoek aan een supermarkt. Er bestaat bij deze winkels geen aparte
+                  &ldquo;alleen wijzigingen&rdquo;-route, dus elke verversing is een volledige doorloop.
                 </p>
                 <p>
-                  Korf <strong>scrapet geen websites</strong> in strijd met hun voorwaarden en omzeilt
-                  geen beveiliging. Kan een bron niet meer, dan schakelen we die winkel uit in plaats
-                  van door te gaan op oude data.
+                  Het gaat om <strong>onofficiële</strong> API&rsquo;s die de eigen webshops gebruiken, niet
+                  om officiële partnerfeeds. Blokkeert een winkel ons, dan zie je dat hier terug (rode
+                  status) en tonen we de laatst bekende prijzen met hun datum. Lidl.nl toont online maar
+                  een beperkt deel van het assortiment (alleen voedingsmiddelen); wat daar niet staat, kennen we niet.
                 </p>
               </>
             }

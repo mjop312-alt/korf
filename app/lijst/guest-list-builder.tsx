@@ -3,20 +3,22 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ListBuilder } from "@/components/list-builder";
+import { useProductCache } from "@/components/use-product-cache";
 import { isBrandModeAvailable } from "@/lib/catalog";
-import { CATALOG, SUPERMARKETS } from "@/lib/mock-data";
-import type { BrandMode, ListItem } from "@/lib/types";
+import { SUPERMARKETS } from "@/lib/mock-data";
+import type { BrandMode, CanonicalProduct, ListItem } from "@/lib/types";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
-const START: ListItem[] = [
-  { id: uid(), productId: "melk", quantity: 2, brandMode: "any" },
-  { id: uid(), productId: "brood", quantity: 1, brandMode: "any" },
-  { id: uid(), productId: "koffie", quantity: 1, brandMode: "any" },
-  { id: uid(), productId: "pindakaas", quantity: 1, brandMode: { brand: "Calvé" } },
-];
 
-export function GuestListBuilder() {
-  const [items, setItems] = useState<ListItem[]>(START);
+export function GuestListBuilder({
+  initialItems,
+  initialProducts,
+}: {
+  initialItems: ListItem[];
+  initialProducts: CanonicalProduct[];
+}) {
+  const { products, learn } = useProductCache(initialProducts);
+  const [items, setItems] = useState<ListItem[]>(initialItems);
   const [stores, setStores] = useState<string[]>(SUPERMARKETS.map((s) => s.id));
   const [note, setNote] = useState<string | null>(null);
 
@@ -24,7 +26,7 @@ export function GuestListBuilder() {
     setItems((prev) => {
       let changed = 0;
       const next = prev.map((it) => {
-        const p = CATALOG.find((c) => c.id === it.productId);
+        const p = products[it.productId];
         if (!p || isBrandModeAvailable(it.brandMode, p, stores)) return it;
         changed++;
         return { ...it, brandMode: "any" as BrandMode };
@@ -32,6 +34,7 @@ export function GuestListBuilder() {
       if (changed) setNote(`${changed} merkkeuze${changed > 1 ? "s" : ""} teruggezet — niet bij deze winkels.`);
       return changed ? next : prev;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stores]);
 
   const add = (slug: string) =>
@@ -66,6 +69,8 @@ export function GuestListBuilder() {
       <ListBuilder
         items={items}
         stores={stores}
+        products={products}
+        onLearn={learn}
         onAdd={add}
         onPatch={patch}
         onRemove={remove}

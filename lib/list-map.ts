@@ -22,18 +22,22 @@ export function brandModeToDb(mode: BrandMode): { brandMode: string; brandName: 
   return { brandMode: "pinned_brand", brandName: mode.brand };
 }
 
-/** Sjablonen voor "nieuwe lijst van sjabloon" — verwijzingen naar canonieke product-slugs. */
-export const LIST_TEMPLATES: Record<string, { label: string; slugs: string[] }> = {
+/**
+ * Sjablonen voor "nieuwe lijst van sjabloon". Geen vaste producten meer: elke zoekterm wordt bij
+ * het aanmaken omgezet in de best passende productgroep uit de catalogus (liefst een die in
+ * meerdere winkels te koop is), zodat een sjabloon altijd echte, actuele producten geeft.
+ */
+export const LIST_TEMPLATES: Record<string, { label: string; terms: string[] }> = {
   weekly: {
     label: "Wekelijkse boodschappen",
-    slugs: ["melk", "brood", "eieren", "koffie", "bananen", "roomboter", "kipfilet", "yoghurt"],
+    terms: ["halfvolle melk 1 l", "brood", "eieren", "koffie 500 g", "roomboter 250 g", "kipfilet", "yoghurt 1 l", "appelsap 1 l"],
   },
   weekend: {
     label: "Weekend",
-    slugs: ["chips", "cola", "bier", "stroopwafels", "pizza", "chocolade"],
+    terms: ["chips", "cola 1.5 l", "pils", "pizza", "chocolade"],
   },
   schoonmaak: {
     label: "Schoonmaak & huishouden",
-    slugs: ["wasmiddel", "afwasmiddel", "allesreiniger", "keukenrol", "vuilniszakken", "toiletpapier"],
+    terms: ["afwasmiddel", "toiletpapier", "wasmiddel"],
   },
 };

@@ -3,18 +3,19 @@ import { lastNumberCents, parseDate, parsePack, weekEnd } from "./util";
 
 describe("parsePack", () => {
   it("rekent naar kg / litre / stuks", () => {
-    expect(parsePack("500 g")).toEqual({ size: 0.5, unit: "kg" });
-    expect(parsePack("1 kg")).toEqual({ size: 1, unit: "kg" });
-    expect(parsePack("1 l")).toEqual({ size: 1, unit: "litre" });
-    expect(parsePack("1,5 liter")).toEqual({ size: 1.5, unit: "litre" });
-    expect(parsePack("330 ml")).toEqual({ size: 0.33, unit: "litre" });
-    expect(parsePack("25 cl")).toEqual({ size: 0.25, unit: "litre" });
-    expect(parsePack("12 stuks")).toEqual({ size: 12, unit: "piece" });
+    expect(parsePack("500 g")).toEqual({ size: 0.5, unit: "kg", count: 1 });
+    expect(parsePack("1 kg")).toEqual({ size: 1, unit: "kg", count: 1 });
+    expect(parsePack("1 l")).toEqual({ size: 1, unit: "litre", count: 1 });
+    expect(parsePack("1,5 liter")).toEqual({ size: 1.5, unit: "litre", count: 1 });
+    expect(parsePack("330 ml")).toEqual({ size: 0.33, unit: "litre", count: 1 });
+    expect(parsePack("25 cl")).toEqual({ size: 0.25, unit: "litre", count: 1 });
+    expect(parsePack("12 stuks")).toEqual({ size: 12, unit: "piece", count: 1 });
   });
 
-  it("vermenigvuldigt multipacks", () => {
-    expect(parsePack("6 x 1 L")).toEqual({ size: 6, unit: "litre" });
-    expect(parsePack("2 x 500 g")).toEqual({ size: 1, unit: "kg" });
+  it("vermenigvuldigt multipacks en onthoudt het aantal", () => {
+    expect(parsePack("6 x 1 L")).toEqual({ size: 6, unit: "litre", count: 6 });
+    expect(parsePack("2 x 500 g")).toEqual({ size: 1, unit: "kg", count: 2 });
+    expect(parsePack("3 x 200 ml")?.count).toBe(3);
     expect(parsePack("12 x 0,33 l")?.size).toBeCloseTo(3.96);
     expect(parsePack("16 x 5.6 g")?.size).toBeCloseTo(0.0896);
   });
@@ -26,7 +27,12 @@ describe("parsePack", () => {
   });
 
   it("verwart 'l' niet met een woord", () => {
-    expect(parsePack("Lidl 4 stuks")).toEqual({ size: 4, unit: "piece" });
+    expect(parsePack("Lidl 4 stuks")).toEqual({ size: 4, unit: "piece", count: 1 });
+  });
+
+  it("de eenheid moet een heel woord zijn (geen 'g' uit 'gram' of 'ml' uit 'mlk')", () => {
+    expect(parsePack("500 gr")).toBeNull();
+    expect(parsePack("2 lekker")).toBeNull();
   });
 });
 

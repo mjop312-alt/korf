@@ -14,7 +14,7 @@ const DELAY_MS = 300;
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
-async function headers(): Promise<Record<string, string>> {
+export async function ahHeaders(): Promise<Record<string, string>> {
   if (!cachedToken || cachedToken.expiresAt < Date.now() + 60_000) {
     const j = await fetchJson<{ access_token: string }>(
       AUTH_URL,
@@ -124,7 +124,7 @@ async function* crawlTaxonomy(
   let totalPages = 1;
   while (page < totalPages && page * PAGE_SIZE < MAX_OFFSET) {
     const url = `${SEARCH_URL}?query=&size=${PAGE_SIZE}&page=${page}&taxonomyId=${id}`;
-    const j = await fetchJson<AHSearch>(url, { headers: await headers() }, { label: `AH ${name} p${page}` });
+    const j = await fetchJson<AHSearch>(url, { headers: await ahHeaders() }, { label: `AH ${name} p${page}` });
     totalPages = j.page?.totalPages ?? 1;
 
     const batch: CrawledProduct[] = [];
@@ -160,7 +160,7 @@ export const ahCrawler: Crawler = {
   store: "ah",
   async *crawlAll(opts: CrawlOptions = {}) {
     const log = opts.log ?? (() => {});
-    const categories = await fetchJson<AHCategory[]>(CATEGORIES_URL, { headers: await headers() }, { label: "AH categorieën" });
+    const categories = await fetchJson<AHCategory[]>(CATEGORIES_URL, { headers: await ahHeaders() }, { label: "AH categorieën" });
     const seen = new Set<string>();
 
     for (const cat of categories) {

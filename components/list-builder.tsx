@@ -3,21 +3,37 @@
 // Herbruikbare lijst-samensteller. Persistentie-agnostisch: krijgt de items +
 // winkelselectie als props en roept callbacks aan bij wijzigingen. Gebruikt door
 // de gast-modus (lokale state) en de ingelogde editor (server-actions).
+//
+// Producten komen uit de volledige catalogus: zoeken gaat via /api/products/search, en de
+// gegevens van elk product (varianten per winkel/merk) leven in `products` — een cache die de
+// ouder beheert (zie use-product-cache.ts) en die groeit naarmate je producten vindt.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ProductTile } from "@/components/product-tile";
 import { brandChoiceOptions, parseBrandMode, serialiseBrandMode } from "@/lib/catalog";
+import type { GroupCard } from "@/lib/catalog-search";
 import { formatEuro } from "@/lib/compare";
-import { CATALOG, SUPERMARKETS } from "@/lib/mock-data";
+import { SUPERMARKETS } from "@/lib/mock-data";
 import { tileBrandFor } from "@/lib/product-visuals";
-import type { BrandMode, CompareResult, ListItem } from "@/lib/types";
+import type { BrandMode, CanonicalProduct, CompareResult, ListItem } from "@/lib/types";
 
-const productBySlug = (slug: string) => CATALOG.find((c) => c.id === slug);
+const storeName = (slug: string) => SUPERMARKETS.find((s) => s.id === slug)?.name ?? slug;
+
+/** Foto bij de gekozen merkvoorkeur: het gekozen merk, anders de foto van de groep. */
+function photoFor(p: CanonicalProduct, mode: BrandMode): string | null {
+  if (typeof mode === "object") {
+    const v = p.variants.find((x) => x.brand === mode.brand && x.imageUrl);
+    if (v?.imageUrl) return v.imageUrl;
+  }
+  return p.imageUrl ?? p.variants.find((v) => v.imageUrl)?.imageUrl ?? null;
+}
 
 export function ListBuilder({
   items,
   stores,
+  products,
+  onLearn,
   onAdd,
   onPatch,
   onRemove,
@@ -27,6 +43,8 @@ export function ListBuilder({
 }: {
   items: ListItem[];
   stores: string[];
+  products: Record<string, CanonicalProduct>;
+  onLearn: (found: CanonicalProduct[]) => void;
   onAdd: (slug: string) => void;
   onPatch: (id: string, patch: Partial<ListItem>) => void;
   onRemove: (id: string) => void;
@@ -35,13 +53,47 @@ export function ListBuilder({
   compareHref?: string;
 }) {
   const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<GroupCard[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [result, setResult] = useState<CompareResult | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const suggestions = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return CATALOG.filter((c) => c.name.toLowerCase().includes(q) || c.category.includes(q)).slice(0, 6);
+  const learnRef = useRef(onLearn);
+  learnRef.current = onLearn;
+  const catalog = useMemo(() => Object.values(products), [products]);
+
+  // zoeken in de volledige catalogus (met een korte vertraging tijdens het typen)
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      setSearched(false);
+      return;
+    }
+    const ctrl = new AbortController();
+    setSearched(false); // geen "niets gevonden" tonen terwijl de nieuwe zoekopdracht nog loopt
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/products/search?q=${encodeURIComponent(q)}&limit=8&variants=1`, {
+          signal: ctrl.signal,
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const j = (await res.json()) as { cards?: GroupCard[]; products?: CanonicalProduct[] };
+        learnRef.current(j.products ?? []);
+        setSuggestions(j.cards ?? []);
+        setSearched(true);
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") setSuggestions([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+      ctrl.abort();
+    };
   }, [query]);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -73,28 +125,51 @@ export function ListBuilder({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Zoek een product — melk, koffie, pindakaas…"
+            type="search"
+            placeholder="Zoek een product — halfvolle melk, koffie, pindakaas…"
+            aria-label="Zoek een product"
             className="w-full rounded-xl border border-line bg-ground px-4 py-3 text-ink outline-none focus-visible:ring-2 focus-visible:ring-brass"
           />
-          {suggestions.length > 0 && (
-            <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-line bg-raised shadow-xl">
-              {suggestions.map((s) => (
-                <li key={s.id}>
-                  <button
-                    onClick={() => {
-                      onAdd(s.id);
-                      setQuery("");
-                    }}
-                    className="flex w-full items-center gap-3 border-t border-line/60 px-3 py-2 text-left first:border-t-0 hover:bg-sunken"
-                  >
-                    <ProductTile product={s} brand={null} size={34} />
-                    <span className="flex-1 font-semibold text-ink">{s.name}</span>
-                    <span className="font-mono text-xs text-sage">
-                      vanaf {formatEuro(Math.min(...s.variants.map((v) => v.promo?.priceCents ?? v.priceCents)))}
-                    </span>
-                  </button>
-                </li>
-              ))}
+          {(suggestions.length > 0 || (searched && !searching)) && query.trim().length >= 2 && (
+            <ul className="absolute z-10 mt-1 max-h-[26rem] w-full overflow-y-auto rounded-xl border border-line bg-raised shadow-xl">
+              {suggestions.length === 0 && (
+                <li className="px-4 py-3 text-sm text-muted">Niets gevonden voor “{query.trim()}”.</li>
+              )}
+              {suggestions.map((s) => {
+                return (
+                  <li key={s.slug}>
+                    <button
+                      onClick={() => {
+                        onAdd(s.slug);
+                        setQuery("");
+                        setSuggestions([]);
+                      }}
+                      className="flex w-full items-center gap-3 border-t border-line/60 px-3 py-2 text-left first:border-t-0 hover:bg-sunken"
+                    >
+                      <ProductTile
+                        product={{ id: s.slug, name: s.name, category: s.category }}
+                        brand={null}
+                        size={38}
+                        imageUrl={s.imageUrl}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-ink">{s.name}</span>
+                        <span className="block font-mono text-[0.65rem] text-muted">
+                          {s.category} · {s.brands} {s.brands === 1 ? "merk" : "merken"}
+                        </span>
+                      </span>
+                      <span className="flex flex-none flex-col items-end font-mono text-[0.68rem] text-sage">
+                        {s.stores.map((st) => (
+                          <span key={st.store}>
+                            {storeName(st.store).split(" ")[0]} {formatEuro(st.cents)}
+                            {st.promo ? " ★" : ""}
+                          </span>
+                        ))}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -126,20 +201,33 @@ export function ListBuilder({
         ) : (
           <ul className="mt-2">
             {items.map((it) => {
-              const p = productBySlug(it.productId);
-              if (!p) return null;
+              const p = products[it.productId];
+              if (!p) {
+                return (
+                  <li key={it.id} className="flex items-center justify-between gap-3 border-t border-line/60 py-3 text-sm text-muted">
+                    <span>Product niet meer beschikbaar</span>
+                    <button
+                      className="h-8 w-8 rounded-lg border border-line text-muted hover:border-clay hover:text-clay"
+                      onClick={() => onRemove(it.id)}
+                      aria-label="Verwijder dit product"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                );
+              }
               const options = brandChoiceOptions(p, stores);
-              const tileBrand = tileBrandFor(it, CATALOG, stores).brand;
+              const tileBrand = tileBrandFor(it, catalog, stores).brand;
               return (
                 <li key={it.id} className="grid grid-cols-[54px_1fr_auto_auto] items-center gap-3 border-t border-line/60 py-3">
-                  <ProductTile product={p} brand={tileBrand} />
+                  <ProductTile product={p} brand={tileBrand} imageUrl={photoFor(p, it.brandMode)} />
                   <div className="min-w-0">
                     <div className="font-semibold text-ink">{p.name}</div>
                     <div className="font-mono text-[0.7rem] text-muted">{p.category}</div>
                     <select
                       value={serialiseBrandMode(it.brandMode)}
                       onChange={(e) => onPatch(it.id, { brandMode: parseBrandMode(e.target.value) })}
-                      className="mt-1 rounded-lg border border-line bg-ground px-2 py-1 text-xs text-text"
+                      className="mt-1 max-w-full rounded-lg border border-line bg-ground px-2 py-1 text-xs text-text"
                       aria-label={`Merkkeuze voor ${p.name}`}
                     >
                       {options.map((o) => (
@@ -206,7 +294,7 @@ export function ListBuilder({
             ))}
             {best && (
               <p className="text-xs text-muted">
-                Besparing t.o.v. {result.referenceLabel}. Demodata.{" "}
+                Besparing t.o.v. {result.referenceLabel}.{" "}
                 <Link href={compareHref} className="text-brass underline underline-offset-2">
                   volledige vergelijking →
                 </Link>
