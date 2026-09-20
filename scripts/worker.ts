@@ -52,9 +52,14 @@ const stamp = () => new Date().toLocaleTimeString("nl-NL");
 const say = (slug: string, msg: string) => console.log(`${stamp()} [${slug}] ${msg}`);
 const fmtMin = (ms: number) => (ms >= 60_000 ? `${Math.round(ms / 60_000)} min` : `${Math.round(ms / 1000)} s`);
 
-/** Slaapt, maar wordt wakker zodra we moeten stoppen. */
+/**
+ * Slaapt, maar wordt wakker zodra we moeten stoppen. Wacht op de KLOK (niet op het aantal
+ * seconden dat het proces wakker was): stond de computer in slaapstand, dan is een ronde na het
+ * ontwaken meteen aan de beurt in plaats van pas na de resterende wachttijd.
+ */
 async function nap(ms: number) {
-  for (let left = ms; left > 0 && !stopping; left -= 1000) await sleep(Math.min(1000, left));
+  const until = Date.now() + ms;
+  while (!stopping && Date.now() < until) await sleep(Math.min(1000, until - Date.now()));
 }
 
 /** Winkels waarvan op dit moment een volledige ronde loopt (dan is een hete verversing overbodig). */
