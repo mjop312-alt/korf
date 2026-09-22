@@ -77,13 +77,17 @@ async function hotLoop(slug: StoreSlug, startDelayMs: number) {
     if (!fullRunning.has(slug)) {
       try {
         const r = await refreshHot(db, slug);
-        fails = 0;
+        // refreshHot vangt fouten per product op (gooit niet): bij een echte blokkade komt dat
+        // hier terug als "alles mislukt, niets gevonden" — dat telt ook mee voor de terugval,
+        // anders blijft de loop een geblokkeerde winkel-API elke 5 minuten bestoken.
+        const totalFailure = r.candidates > 0 && r.found === 0 && r.failed >= r.candidates;
+        fails = totalFailure ? fails + 1 : 0;
         // alleen loggen als er iets te melden valt (anders elke 5 min een regel per winkel)
         if (r.changed || r.failed || r.created || tick % 12 === 1) {
           say(
             `${slug}·hot`,
             `${r.candidates} lijstproducten: ${r.found} gevonden · ${r.changed} gewijzigd · ${r.missing} niet gevonden` +
-              `${r.failed ? ` · ${r.failed} fout` : ""} (${fmtMin(r.durationMs)})`,
+              `${r.failed ? ` · ${r.failed} fout` : ""}${totalFailure ? ` — lijkt geblokkeerd (${fails}× op rij)` : ""} (${fmtMin(r.durationMs)})`,
           );
         }
       } catch (e) {
