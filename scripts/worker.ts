@@ -37,7 +37,10 @@ const verbose = args.verbose === "true";
 const limit = args.limit ? parseInt(args.limit, 10) : undefined;
 const wanted = (args.stores ?? "all") === "all" ? STORES : (args.stores.split(",") as StoreSlug[]);
 
-const DEFAULT_MIN: Record<StoreSlug, number> = { ah: 15, jumbo: 30, lidl: 60, aldi: 15, plus: 30 };
+const DEFAULT_MIN: Record<StoreSlug, number> = { ah: 15, jumbo: 30, lidl: 60, aldi: 60, plus: 30 };
+// (2026-09-22: Aldi stond even op 15 min — een categorieronde duurt maar 2 min, dus het leek
+// veilig — maar Jumbo en PLUS bleken kort daarna geblokkeerd (403) en Aldi verloor tegelijk
+// bijna 10% van zijn producten in één ronde. Terug naar 60 min tot dat rustig is uitgezocht.)
 // Producten op lijsten/favorieten/alerts worden vaker ververst dan het volledige assortiment
 const hotEveryMs = (parseInt(process.env.CRAWL_HOT_INTERVAL_MIN ?? "", 10) || 5) * 60_000;
 const intervalMs = (slug: StoreSlug) => {
