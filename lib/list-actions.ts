@@ -221,6 +221,16 @@ export async function addToActiveList(slug: string) {
   revalidatePath(`/product/${slug}`);
 }
 
+/** Voegt een ontbrekend ingrediënt (zoekterm, geen slug) toe — voor de gerechten-pagina. */
+export async function addIngredientToList(listId: string, term: string) {
+  const userId = await requireUserId();
+  await assertOwns(userId, listId);
+  const slug = await findGroupSlug(db, term);
+  if (!slug) throw new Error("PRODUCT_NOT_FOUND");
+  await addItemBySlug(listId, slug);
+  revalidatePath(`/lijst/${listId}/gerechten`);
+}
+
 export async function clearChecked(listId: string) {
   const userId = await requireUserId();
   await assertOwns(userId, listId);

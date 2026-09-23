@@ -138,6 +138,9 @@ export function ListEditor({
           <Link href={`/vergelijk?lijst=${list.id}`} className="rounded-xl bg-ink px-4 py-2 font-medium text-ground">
             Vergelijk prijzen
           </Link>
+          <Link href={`/lijst/${list.id}/gerechten`} className="rounded-xl border border-line px-3 py-2 text-ink">
+            🍳 Gerechten
+          </Link>
           <button onClick={() => run(() => duplicateList(list.id))} className="rounded-xl border border-line px-3 py-2 text-ink">
             Dupliceer
           </button>
