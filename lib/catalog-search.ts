@@ -66,12 +66,19 @@ function words(q: string | undefined): string[] {
   return searchTerms(q ?? "").filter((t) => !isSizeToken(t));
 }
 
-function filters(o: SearchOptions, withText: boolean): Prisma.Sql[] {
+// trigram-woordgelijkenis (pg_trgm, zie scripts/setup-search.ts) — alleen als typo-vangnet
+// gebruikt (fuzzy=true), niet standaard: te ruim voor korte woorden om als eerste filter te dienen
+const FUZZY_THRESHOLD = 0.45;
+
+function filters(o: SearchOptions, withText: boolean, fuzzy = false): Prisma.Sql[] {
   const c: Prisma.Sql[] = [Prisma.sql`sp.available AND sp."externalId" IS NOT NULL`];
   if (withText) {
     // per zoekwoord een OR van het woord zelf + bekende synoniemen (fillerwoorden vallen weg)
     for (const alts of expandSearchWords(words(o.q))) {
-      c.push(Prisma.sql`(${Prisma.join(alts.map((a) => Prisma.sql`sp."searchText" LIKE ${"%" + a + "%"}`), " OR ")})`);
+      const hits = alts.map((a) => Prisma.sql`sp."searchText" LIKE ${"%" + a + "%"}`);
+      // fuzzy: ook een typo van het eerste (letterlijke) woord toestaan, bv. "melkk" ~ "melk"
+      if (fuzzy && alts[0].length >= 4) hits.push(Prisma.sql`word_similarity(${alts[0]}, sp."searchText") > ${FUZZY_THRESHOLD}`);
+      c.push(Prisma.sql`(${Prisma.join(hits, " OR ")})`);
     }
     // "1 l" / "500 g" in de zoekterm is een filter op verpakking, geen woord in de titel
     const pack = parsePack(o.q);
@@ -94,7 +101,6 @@ export async function searchGroups(
 ): Promise<{ total: number; page: number; pageSize: number; cards: GroupCard[] }> {
   const pageSize = Math.min(Math.max(o.pageSize ?? 24, 1), 60);
   const page = Math.max(o.page ?? 1, 1);
-  const where = Prisma.join(filters(o, true), " AND ");
   const minStores = Math.max(o.minStores ?? 1, 1);
   // fillerwoorden ("spul") tellen niet mee voor de "staat exact in de naam"-boost
   const ws = expandSearchWords(words(o.q)).map((alts) => alts[0]);
@@ -109,20 +115,40 @@ export async function searchGroups(
       ? Prisma.sql`g.min_cents ASC, g.stores DESC`
       : Prisma.sql`${nameHit} ASC, g.stores DESC, g.products DESC, length(cp2.name) ASC, cp2.name ASC`;
 
-  const ids = await db.$queryRaw<{ gid: string; products: number; brands: number; total: number }[]>`
-    SELECT g.gid, g.products, g.brands, (COUNT(*) OVER())::int AS total
-    FROM (
-      SELECT sp."canonicalProductId" AS gid,
-             COUNT(DISTINCT s.id)::int AS stores, COUNT(*)::int AS products, COUNT(DISTINCT b.id)::int AS brands,
-             MIN(${EFFECTIVE}) AS min_cents
-      ${FROM}
-      WHERE ${where}
-      GROUP BY sp."canonicalProductId"
-      HAVING COUNT(DISTINCT s.id) >= ${minStores}
-    ) g
-    JOIN "CanonicalProduct" cp2 ON cp2.id = g.gid
-    ORDER BY ${order}
-    LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`;
+  // som van de beste woordgelijkenis per zoekwoord — alleen zinvol als sorteersleutel bij een
+  // fuzzy zoekopdracht, anders overheerst een toevallige typo in één titel de hele lijst
+  const fuzzyScore = ws.length
+    ? Prisma.sql`(${Prisma.join(ws.map((t) => Prisma.sql`word_similarity(${t}, sp."searchText")`), " + ")})`
+    : Prisma.sql`0`;
+
+  const findIds = (fuzzy: boolean) => {
+    const where = Prisma.join(filters(o, true, fuzzy), " AND ");
+    const scoreCol = fuzzy ? Prisma.sql`, MAX(${fuzzyScore}) AS fuzzy_score` : Prisma.sql``;
+    const orderBy = fuzzy ? Prisma.sql`g.fuzzy_score DESC, g.stores DESC, g.products DESC` : order;
+    return db.$queryRaw<{ gid: string; products: number; brands: number; total: number }[]>`
+      SELECT g.gid, g.products, g.brands, (COUNT(*) OVER())::int AS total
+      FROM (
+        SELECT sp."canonicalProductId" AS gid,
+               COUNT(DISTINCT s.id)::int AS stores, COUNT(*)::int AS products, COUNT(DISTINCT b.id)::int AS brands,
+               MIN(${EFFECTIVE}) AS min_cents${scoreCol}
+        ${FROM}
+        WHERE ${where}
+        GROUP BY sp."canonicalProductId"
+        HAVING COUNT(DISTINCT s.id) >= ${minStores}
+      ) g
+      JOIN "CanonicalProduct" cp2 ON cp2.id = g.gid
+      ORDER BY ${orderBy}
+      LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`;
+  };
+
+  let ids = await findIds(false);
+  // weinig of niets gevonden op het letterlijke woord (+ synoniemen)? probeer het nog eens met een
+  // typo-marge — alleen op de eerste pagina, en alleen als dat écht meer oplevert (een enkele
+  // toevallige letterlijke treffer, bv. een typo in een titel elders, mag de fuzzy-poging niet blokkeren)
+  if (ids.length < 3 && page === 1 && words(o.q).length) {
+    const fuzzyIds = await findIds(true);
+    if (fuzzyIds.length > ids.length) ids = fuzzyIds;
+  }
 
   if (!ids.length) return { total: 0, page, pageSize, cards: [] };
   const gids = ids.map((r) => r.gid);
