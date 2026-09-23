@@ -1,5 +1,5 @@
-// GET /api/products/search?q=&store=ah,jumbo&category=&brand=&kind=a|own&promo=1&minStores=2&sort=price&page=1
-// `store` mag meerdere, kommagescheiden winkel-slugs bevatten.
+// GET /api/products/search?q=&store=ah,jumbo&category=&brand=&kind=a|own&dieet=vegan,glutenvrij&promo=1&minStores=2&sort=price&page=1
+// `store` en `dieet` mogen meerdere, kommagescheiden waarden bevatten (dieet-slugs: zie lib/diet-filters.ts).
 //
 // Zoekt in de volledige catalogus. Geeft productgroepen terug (met per winkel de goedkoopste
 // prijs) en, bij `variants=1`, ook de groepen met al hun varianten — dat heeft de lijstbouwer
@@ -25,6 +25,7 @@ export async function GET(request: Request) {
   const sort = p.get("sort");
 
   const stores = p.get("store")?.split(",").map((s) => s.trim()).filter(Boolean);
+  const diet = p.get("dieet")?.split(",").map((s) => s.trim()).filter(Boolean);
 
   const result = await searchGroups(db, {
     q: p.get("q")?.slice(0, 80) || undefined,
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
     category: p.get("category") || undefined,
     brand: p.get("brand") || undefined,
     kind: kind === "a" || kind === "own" ? kind : undefined,
+    diet: diet?.length ? diet : undefined,
     promo: p.get("promo") === "1",
     minStores: p.get("minStores") ? parseInt(p.get("minStores")!, 10) || 1 : undefined,
     sort: sort === "price" || sort === "stores" ? sort : "relevance",

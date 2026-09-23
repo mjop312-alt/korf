@@ -6,6 +6,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { isSizeToken, searchTerms } from "./crawl/group";
 import { parsePack } from "./crawl/util";
+import { dietWords } from "./diet-filters";
 import { expandSearchWords } from "./search-synonyms";
 
 export interface SearchOptions {
@@ -18,6 +19,8 @@ export interface SearchOptions {
   brand?: string;
   /** a = alleen A-merken, own = alleen huismerken */
   kind?: "a" | "own";
+  /** dieetfilters (slugs uit DIET_TAGS) — allemaal moeten kloppen (AND), per tag telt elk woord (OR) */
+  diet?: string[];
   /** alleen producten met een lopende aanbieding */
   promo?: boolean;
   /** alleen groepen die in minstens zoveel winkels te koop zijn */
@@ -91,6 +94,10 @@ function filters(o: SearchOptions, withText: boolean, fuzzy = false): Prisma.Sql
   if (o.brand) c.push(Prisma.sql`lower(b.name) = lower(${o.brand})`);
   if (o.kind === "own") c.push(Prisma.sql`b."isOwnBrand"`);
   if (o.kind === "a") c.push(Prisma.sql`NOT b."isOwnBrand"`);
+  // elke gekozen dieettag moet kloppen (AND); per tag is één van zijn woorden genoeg (OR)
+  for (const tagWords of dietWords(o.diet ?? [])) {
+    c.push(Prisma.sql`(${Prisma.join(tagWords.map((w) => Prisma.sql`sp."searchText" LIKE ${"%" + w + "%"}`), " OR ")})`);
+  }
   if (o.promo) c.push(Prisma.sql`${PROMO_ACTIVE}`);
   return c;
 }

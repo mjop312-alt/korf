@@ -5,6 +5,7 @@ import { SiteFooter, SiteHeader } from "@/components/site-chrome";
 import { listCategories, searchGroups, topBrands, type SearchOptions } from "@/lib/catalog-search";
 import { formatEuro } from "@/lib/compare";
 import { db } from "@/lib/db";
+import { DIET_TAGS } from "@/lib/diet-filters";
 import { addToActiveList } from "@/lib/list-actions";
 import { getUserId } from "@/lib/lists";
 
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   description: "Zoek en vergelijk het hele assortiment van Albert Heijn, Jumbo en Lidl: alle merken en huismerken.",
 };
 
-type SP = { q?: string; winkel?: string; categorie?: string; merk?: string; soort?: string; actie?: string; pagina?: string; sorteer?: string };
+type SP = { q?: string; winkel?: string; categorie?: string; merk?: string; soort?: string; actie?: string; pagina?: string; sorteer?: string; dieet?: string };
 
 const STORES = [
   { slug: "ah", name: "Albert Heijn" },
@@ -28,14 +29,16 @@ const STORES = [
 export default async function ProductenPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const page = Math.max(parseInt(sp.pagina ?? "1", 10) || 1, 1);
-  // meerdere winkels tegelijk aanvinken: kommagescheiden in de URL ("winkel=ah,jumbo")
+  // meerdere winkels/dieetwensen tegelijk aanvinken: kommagescheiden in de URL ("winkel=ah,jumbo")
   const selectedStores = (sp.winkel ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const selectedDiets = (sp.dieet ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const opts: SearchOptions = {
     q: sp.q?.slice(0, 80),
     stores: selectedStores.length ? selectedStores : undefined,
     category: sp.categorie,
     brand: sp.merk,
     kind: sp.soort === "a" || sp.soort === "own" ? sp.soort : undefined,
+    diet: selectedDiets.length ? selectedDiets : undefined,
     promo: sp.actie === "1",
     sort: sp.sorteer === "price" ? "price" : sp.sorteer === "stores" ? "stores" : "relevance",
     page,
@@ -64,6 +67,12 @@ export default async function ProductenPage({ searchParams }: { searchParams: Pr
     if (next.has(slug)) next.delete(slug);
     else next.add(slug);
     return href({ winkel: next.size ? [...next].join(",") : undefined });
+  };
+  const toggleDietHref = (slug: string) => {
+    const next = new Set(selectedDiets);
+    if (next.has(slug)) next.delete(slug);
+    else next.add(slug);
+    return href({ dieet: next.size ? [...next].join(",") : undefined });
   };
   const returnTo = href({ pagina: sp.pagina });
 
@@ -119,6 +128,15 @@ export default async function ProductenPage({ searchParams }: { searchParams: Pr
               ))}
             </div>
           )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 font-mono text-[0.62rem] uppercase text-muted">Dieet</span>
+            <Link href={href({ dieet: undefined })} className={chip(selectedDiets.length === 0)}>alle</Link>
+            {DIET_TAGS.map((t) => (
+              <Link key={t.slug} href={toggleDietHref(t.slug)} className={chip(selectedDiets.includes(t.slug))}>
+                {t.label}
+              </Link>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="mr-1 font-mono text-[0.62rem] uppercase text-muted">Sorteer</span>
             <Link href={href({ sorteer: undefined })} className={chip(opts.sort === "relevance")}>relevantie</Link>
