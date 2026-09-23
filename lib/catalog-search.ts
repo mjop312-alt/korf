@@ -6,6 +6,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { isSizeToken, searchTerms } from "./crawl/group";
 import { parsePack } from "./crawl/util";
+import { expandSearchWords } from "./search-synonyms";
 
 export interface SearchOptions {
   q?: string;
@@ -68,7 +69,10 @@ function words(q: string | undefined): string[] {
 function filters(o: SearchOptions, withText: boolean): Prisma.Sql[] {
   const c: Prisma.Sql[] = [Prisma.sql`sp.available AND sp."externalId" IS NOT NULL`];
   if (withText) {
-    for (const t of words(o.q)) c.push(Prisma.sql`sp."searchText" LIKE ${"%" + t + "%"}`);
+    // per zoekwoord een OR van het woord zelf + bekende synoniemen (fillerwoorden vallen weg)
+    for (const alts of expandSearchWords(words(o.q))) {
+      c.push(Prisma.sql`(${Prisma.join(alts.map((a) => Prisma.sql`sp."searchText" LIKE ${"%" + a + "%"}`), " OR ")})`);
+    }
     // "1 l" / "500 g" in de zoekterm is een filter op verpakking, geen woord in de titel
     const pack = parsePack(o.q);
     if (pack) {
@@ -92,7 +96,8 @@ export async function searchGroups(
   const page = Math.max(o.page ?? 1, 1);
   const where = Prisma.join(filters(o, true), " AND ");
   const minStores = Math.max(o.minStores ?? 1, 1);
-  const ws = words(o.q);
+  // fillerwoorden ("spul") tellen niet mee voor de "staat exact in de naam"-boost
+  const ws = expandSearchWords(words(o.q)).map((alts) => alts[0]);
   const nameHit = ws.length
     ? Prisma.sql`CASE WHEN ${Prisma.join(
         ws.map((t) => Prisma.sql`lower(cp2.name) ~ ${"(^| )" + t.replace(/[^a-z0-9]/g, "") + "( |$)"}`),
