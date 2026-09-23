@@ -9,8 +9,8 @@ import { parsePack } from "./crawl/util";
 
 export interface SearchOptions {
   q?: string;
-  /** winkel-slug (ah | jumbo | lidl) */
-  store?: string;
+  /** winkel-slugs (ah | jumbo | lidl | aldi | plus) — leeg/weggelaten ⇒ alle winkels */
+  stores?: string[];
   /** categorie-slug */
   category?: string;
   /** exacte merknaam (hoofdletterongevoelig) */
@@ -75,7 +75,7 @@ function filters(o: SearchOptions, withText: boolean): Prisma.Sql[] {
       c.push(Prisma.sql`cp."baseUnit" = ${pack.unit} AND abs(cp."baseSize" - ${pack.size}) <= ${pack.size * 0.02}`);
     }
   }
-  if (o.store) c.push(Prisma.sql`s.slug = ${o.store}`);
+  if (o.stores?.length) c.push(Prisma.sql`s.slug = ANY(${o.stores}::text[])`);
   if (o.category) c.push(Prisma.sql`c.slug = ${o.category}`);
   if (o.brand) c.push(Prisma.sql`lower(b.name) = lower(${o.brand})`);
   if (o.kind === "own") c.push(Prisma.sql`b."isOwnBrand"`);

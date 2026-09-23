@@ -28,9 +28,11 @@ const STORES = [
 export default async function ProductenPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const page = Math.max(parseInt(sp.pagina ?? "1", 10) || 1, 1);
+  // meerdere winkels tegelijk aanvinken: kommagescheiden in de URL ("winkel=ah,jumbo")
+  const selectedStores = (sp.winkel ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const opts: SearchOptions = {
     q: sp.q?.slice(0, 80),
-    store: sp.winkel,
+    stores: selectedStores.length ? selectedStores : undefined,
     category: sp.categorie,
     brand: sp.merk,
     kind: sp.soort === "a" || sp.soort === "own" ? sp.soort : undefined,
@@ -56,6 +58,13 @@ export default async function ProductenPage({ searchParams }: { searchParams: Pr
   };
   const chip = (active: boolean) =>
     `rounded-full border px-3 py-1 text-xs ${active ? "border-brass bg-brass-wash text-ink" : "border-line text-muted hover:text-ink"}`;
+  // klik op een winkel voegt 'm toe/haalt 'm weg uit de selectie (i.p.v. de selectie te vervangen)
+  const toggleStoreHref = (slug: string) => {
+    const next = new Set(selectedStores);
+    if (next.has(slug)) next.delete(slug);
+    else next.add(slug);
+    return href({ winkel: next.size ? [...next].join(",") : undefined });
+  };
   const returnTo = href({ pagina: sp.pagina });
 
   return (
@@ -89,9 +98,11 @@ export default async function ProductenPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="mr-1 font-mono text-[0.62rem] uppercase text-muted">Winkel</span>
-            <Link href={href({ winkel: undefined })} className={chip(!sp.winkel)}>alle</Link>
+            <Link href={href({ winkel: undefined })} className={chip(selectedStores.length === 0)}>alle</Link>
             {STORES.map((s) => (
-              <Link key={s.slug} href={href({ winkel: s.slug })} className={chip(sp.winkel === s.slug)}>{s.name}</Link>
+              <Link key={s.slug} href={toggleStoreHref(s.slug)} className={chip(selectedStores.includes(s.slug))}>
+                {s.name}
+              </Link>
             ))}
             <span className="ml-3 mr-1 font-mono text-[0.62rem] uppercase text-muted">Soort</span>
             <Link href={href({ soort: undefined })} className={chip(!opts.kind)}>alle</Link>

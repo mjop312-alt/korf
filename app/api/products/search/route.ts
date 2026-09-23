@@ -1,4 +1,5 @@
-// GET /api/products/search?q=&store=&category=&brand=&kind=a|own&promo=1&minStores=2&sort=price&page=1
+// GET /api/products/search?q=&store=ah,jumbo&category=&brand=&kind=a|own&promo=1&minStores=2&sort=price&page=1
+// `store` mag meerdere, kommagescheiden winkel-slugs bevatten.
 //
 // Zoekt in de volledige catalogus. Geeft productgroepen terug (met per winkel de goedkoopste
 // prijs) en, bij `variants=1`, ook de groepen met al hun varianten — dat heeft de lijstbouwer
@@ -23,9 +24,11 @@ export async function GET(request: Request) {
   const kind = p.get("kind");
   const sort = p.get("sort");
 
+  const stores = p.get("store")?.split(",").map((s) => s.trim()).filter(Boolean);
+
   const result = await searchGroups(db, {
     q: p.get("q")?.slice(0, 80) || undefined,
-    store: p.get("store") || undefined,
+    stores: stores?.length ? stores : undefined,
     category: p.get("category") || undefined,
     brand: p.get("brand") || undefined,
     kind: kind === "a" || kind === "own" ? kind : undefined,
