@@ -5,7 +5,7 @@ import { createShare } from "@/lib/list-actions";
 
 export function ShareListDialog({ listId }: { listId: string }) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"read" | "copy">("copy");
+  const [mode, setMode] = useState<"read" | "copy" | "edit">("edit");
   const [url, setUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, start] = useTransition();
@@ -41,6 +41,10 @@ export function ShareListDialog({ listId }: { listId: string }) {
             <>
               <p className="font-mono text-[0.62rem] uppercase tracking-wider text-muted">Hoe delen?</p>
               <div className="mt-2 space-y-1.5 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="mode" checked={mode === "edit"} onChange={() => setMode("edit")} />
+                  <span className="text-ink">Samen bewerken — ieder met de link voegt toe/wijzigt op dezelfde lijst</span>
+                </label>
                 <label className="flex items-center gap-2">
                   <input type="radio" name="mode" checked={mode === "copy"} onChange={() => setMode("copy")} />
                   <span className="text-ink">Kopieerbaar — ontvanger krijgt zijn eigen kopie</span>

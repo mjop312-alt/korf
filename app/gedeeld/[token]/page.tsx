@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteFooter, SiteHeader } from "@/components/site-chrome";
+import { SharedListEditor } from "@/components/shared-list-editor";
+import { loadGroups } from "@/lib/catalog-db";
 import { copySharedList } from "@/lib/list-actions";
-import { getUserId } from "@/lib/lists";
+import { getUserId, toEngineItems } from "@/lib/lists";
 import { getShareByToken } from "@/lib/shares";
+import { STORES as SUPERMARKETS } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Gedeelde lijst — Korf" };
@@ -24,14 +27,63 @@ export default async function SharedListPage({ params }: { params: Promise<{ tok
   if (!share) notFound();
 
   const userId = await getUserId();
+  const ownerName = share.list.owner.name ?? "een Korf-gebruiker";
+
+  // "samen bewerken": zelfde bouwstenen als de eigen lijst-editor, geen aparte alleen-lezen weergave
+  if (share.mode === "edit") {
+    if (!userId) {
+      return (
+        <div className="min-h-screen bg-ground text-text">
+          <SiteHeader />
+          <main id="main-content" className="mx-auto max-w-2xl px-6 py-10">
+            <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Gedeeld door {ownerName}</p>
+            <h1 className="mt-2 font-display text-3xl font-light text-ink">{share.list.name}</h1>
+            <p className="mt-3 text-sm text-muted">
+              Log in om samen met {ownerName} deze lijst te bewerken. Iedereen met deze link en een Korf-account kan
+              producten toevoegen, wijzigen of verwijderen.
+            </p>
+            <Link
+              href={`/inloggen?callbackUrl=${encodeURIComponent(`/gedeeld/${token}`)}`}
+              className="mt-5 inline-block rounded-xl bg-ink px-5 py-2.5 text-sm font-medium text-ground"
+            >
+              Inloggen
+            </Link>
+          </main>
+          <SiteFooter />
+        </div>
+      );
+    }
+
+    const items = toEngineItems(share.list.items);
+    const initialProducts = await loadGroups(items.map((i) => i.productId));
+    const allStoreIds = SUPERMARKETS.map((s) => s.id);
+    const listStores = (share.list.storeIds as string[] | null)?.filter((s) => allStoreIds.includes(s));
+    const initialStores = listStores?.length ? listStores : allStoreIds;
+
+    return (
+      <div className="min-h-screen bg-ground text-text">
+        <SiteHeader />
+        <main id="main-content" className="mx-auto max-w-5xl px-5 py-10">
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Samen bewerken · gedeeld door {ownerName}</p>
+          <h1 className="mt-2 mb-6 font-display text-3xl font-light text-ink">{share.list.name}</h1>
+          <SharedListEditor
+            listId={share.list.id}
+            ownerName={ownerName}
+            initialItems={items}
+            initialProducts={initialProducts}
+            initialStores={initialStores}
+          />
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
       <main id="main-content" className="mx-auto max-w-2xl px-6 py-10">
-        <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">
-          Gedeeld door {share.list.owner.name ?? "een Korf-gebruiker"}
-        </p>
+        <p className="font-mono text-xs uppercase tracking-[0.16em] text-muted">Gedeeld door {ownerName}</p>
         <h1 className="mt-2 font-display text-3xl font-light text-ink">{share.list.name}</h1>
         <p className="mt-2 text-sm text-muted">
           {share.mode === "copy"

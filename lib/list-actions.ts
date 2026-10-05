@@ -17,6 +17,25 @@ async function assertOwns(userId: string, listId: string) {
   return list;
 }
 
+/**
+ * Voor regel-mutaties (toevoegen/aanpassen/verwijderen, winkelkeuze): eigenaar, of iemand met
+ * een geldige "samen bewerken"-link (ListShare mode "edit") voor deze lijst. Alleen ingelogde
+ * gebruikers kunnen zo'n link gebruiken — wie precies wijzigde wordt niet apart bijgehouden.
+ */
+async function assertCanEdit(userId: string, listId: string) {
+  const list = await db.shoppingList.findFirst({
+    where: {
+      id: listId,
+      OR: [
+        { ownerId: userId },
+        { shares: { some: { mode: "edit", OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] } } },
+      ],
+    },
+  });
+  if (!list) throw new Error("NOT_FOUND");
+  return list;
+}
+
 /* ─────────────── lijst-niveau ─────────────── */
 
 export async function createList(formData: FormData) {
@@ -89,7 +108,7 @@ export async function archiveList(listId: string) {
 
 export async function setListStores(listId: string, storeIds: string[]) {
   const userId = await requireUserId();
-  await assertOwns(userId, listId);
+  await assertCanEdit(userId, listId);
   await db.shoppingList.update({ where: { id: listId }, data: { storeIds } });
   revalidatePath(`/lijst/${listId}`);
 }
@@ -143,7 +162,7 @@ export async function duplicateList(listId: string) {
 
 export async function addItemBySlug(listId: string, slug: string) {
   const userId = await requireUserId();
-  await assertOwns(userId, listId);
+  await assertCanEdit(userId, listId);
 
   const cp = await db.canonicalProduct.findUnique({ where: { slug } });
   if (!cp) throw new Error("PRODUCT_NOT_FOUND");
@@ -188,7 +207,7 @@ export async function updateItem(
   patch: { quantity?: number; brandMode?: BrandMode; checked?: boolean },
 ) {
   const userId = await requireUserId();
-  await assertOwns(userId, listId);
+  await assertCanEdit(userId, listId);
 
   const data: Record<string, unknown> = {};
   if (typeof patch.quantity === "number") data.quantity = Math.max(1, Math.round(patch.quantity));
@@ -207,7 +226,7 @@ export async function updateItem(
 
 export async function removeItem(listId: string, itemId: string) {
   const userId = await requireUserId();
-  await assertOwns(userId, listId);
+  await assertCanEdit(userId, listId);
   await db.shoppingListItem.deleteMany({ where: { id: itemId, listId } });
   revalidatePath(`/lijst/${listId}`);
 }
@@ -224,7 +243,7 @@ export async function addToActiveList(slug: string) {
 /** Voegt een ontbrekend ingrediënt (zoekterm, geen slug) toe — voor de gerechten-pagina. */
 export async function addIngredientToList(listId: string, term: string) {
   const userId = await requireUserId();
-  await assertOwns(userId, listId);
+  await assertCanEdit(userId, listId);
   const slug = await findGroupSlug(db, term);
   if (!slug) throw new Error("PRODUCT_NOT_FOUND");
   await addItemBySlug(listId, slug);
@@ -233,7 +252,7 @@ export async function addIngredientToList(listId: string, term: string) {
 
 export async function clearChecked(listId: string) {
   const userId = await requireUserId();
-  await assertOwns(userId, listId);
+  await assertCanEdit(userId, listId);
   await db.shoppingListItem.deleteMany({ where: { listId, checked: true } });
   revalidatePath(`/lijst/${listId}`);
 }
@@ -258,8 +277,8 @@ export async function recordSavingsSnapshot(
 
 /* ─────────────── delen ─────────────── */
 
-/** Maakt een deel-link. mode "read" = alleen bekijken, "copy" = kopieerbaar naar eigen lijsten. */
-export async function createShare(listId: string, mode: "read" | "copy") {
+/** Maakt een deel-link. "read" = alleen bekijken, "copy" = kopieerbaar, "edit" = samen bewerken. */
+export async function createShare(listId: string, mode: "read" | "copy" | "edit") {
   const userId = await requireUserId();
   await assertOwns(userId, listId);
   const token = crypto.randomUUID().replace(/-/g, "");
