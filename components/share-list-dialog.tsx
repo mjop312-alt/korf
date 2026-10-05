@@ -1,14 +1,24 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createShare } from "@/lib/list-actions";
+import { createShare, revokeShares } from "@/lib/list-actions";
 
 export function ShareListDialog({ listId }: { listId: string }) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"read" | "copy" | "edit">("edit");
+  const [mode, setMode] = useState<"read" | "copy" | "edit">("copy");
   const [url, setUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, start] = useTransition();
+  const [revoked, setRevoked] = useState(false);
+
+  const revoke = () => {
+    if (!confirm("Alle deel-links van deze lijst intrekken? Wie een link heeft kan de lijst dan niet meer openen of bewerken.")) return;
+    start(async () => {
+      await revokeShares(listId);
+      setUrl(null);
+      setRevoked(true);
+    });
+  };
 
   const generate = () =>
     start(async () => {
@@ -23,6 +33,7 @@ export function ShareListDialog({ listId }: { listId: string }) {
         onClick={() => {
           setOpen((o) => !o);
           setUrl(null);
+          setRevoked(false);
         }}
         aria-haspopup="true"
         aria-expanded={open}
@@ -61,6 +72,10 @@ export function ShareListDialog({ listId }: { listId: string }) {
               >
                 {pending ? "Bezig…" : "Maak link"}
               </button>
+              <button onClick={revoke} disabled={pending} className="mt-2 w-full text-center font-mono text-xs text-muted underline underline-offset-2 hover:text-clay">
+                Alle bestaande links intrekken
+              </button>
+              {revoked && <p className="mt-1 text-center text-xs text-sage">Alle links zijn ingetrokken.</p>}
             </>
           ) : (
             <>
