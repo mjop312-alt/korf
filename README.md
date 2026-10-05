@@ -40,6 +40,7 @@ lokaal bestand — geen bevestigingsvraag.
 | `npm run regroup` | alle producten opnieuw in productgroepen indelen + EAN-samenvoeging (`-- --stats` = alleen cijfers) |
 | `npm run enrich-ean` | AH-producten van een EAN voorzien (hervatbaar; nodig om AH en Jumbo op barcode te matchen) |
 | `npm run setup-search` | eenmalig: pg_trgm-uitbreiding + trigram-index aanzetten (nodig voor typo-tolerant zoeken) |
+| `npm run enrich-nova` | bewerkingsgraad (NOVA 1–4) per barcode ophalen bij Open Food Facts (hervatbaar, ~80 verzoeken/min); alleen als badge op de productpagina, bewust geen filter: slechts ~1 op 9 producten heeft een score |
 | `npm run smoke` | rooktest van een draaiende app: alle pagina's en API's ophalen en op 200 + inhoud controleren |
 | `npm run purge-mock` | eenmalig: oude mockrijen uit de database halen |
 | `npm run check-alerts` | alert-trigger-job: prijsalerts tegen actuele prijzen, mailt de treffers (cron: elk uur) |

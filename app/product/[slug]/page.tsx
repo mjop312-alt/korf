@@ -23,6 +23,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     : { title: "Product niet gevonden — Korf" };
 }
 
+const NOVA_TEXT: Record<number, { short: string; long: string }> = {
+  1: { short: "onbewerkt", long: "NOVA 1: onbewerkt of minimaal bewerkt (bron: Open Food Facts)" },
+  2: { short: "bereidingsingrediënt", long: "NOVA 2: culinair bereidingsingrediënt zoals olie, boter, suiker (bron: Open Food Facts)" },
+  3: { short: "bewerkt", long: "NOVA 3: bewerkt voedsel (bron: Open Food Facts)" },
+  4: { short: "ultrabewerkt", long: "NOVA 4: ultrabewerkt voedsel (bron: Open Food Facts)" },
+};
+
 const unitLabel: Record<string, string> = { kg: "kg", litre: "l", piece: "stuk", pack: "verpakking" };
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -114,6 +121,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: o.storeColor }} />
                   <span className="font-medium text-ink">{o.storeName}</span>
                   <span className="font-mono text-xs text-muted">{o.brand}</span>
+                  {o.nova != null && (
+                    <span
+                      title={NOVA_TEXT[o.nova]?.long}
+                      className={`rounded-full border px-1.5 text-[0.55rem] uppercase ${o.nova >= 4 ? "border-clay text-clay" : "border-sage text-sage"}`}
+                    >
+                      NOVA {o.nova} · {NOVA_TEXT[o.nova]?.short}
+                    </span>
+                  )}
                   {o.isPromo && o.promoLabel && (
                     <span className="rounded-full border border-brass px-1.5 text-[0.55rem] uppercase text-brass">{o.promoLabel}</span>
                   )}
@@ -129,6 +144,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             );
           })}
         </div>
+
+        {product.offers.some((o) => o.nova != null) && (
+          <p className="mt-2 text-xs text-muted">
+            Bewerkingsgraad volgens het NOVA-systeem, uit de open database Open Food Facts — alleen getoond als daar een score van bekend is; geen score betekent niet dat het product onbewerkt is.
+          </p>
+        )}
 
         {/* prijsverloop */}
         <h2 className="mt-10 font-display text-xl font-light text-ink">Prijsverloop</h2>

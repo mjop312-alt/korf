@@ -100,6 +100,13 @@ export async function getProductDetail(slug: string) {
   });
   if (!cp) return null;
 
+  // bewerkingsgraad (NOVA) uit de Open Food Facts-cache, per barcode — voor de meeste producten onbekend
+  const eans = [...new Set(cp.storeProducts.map((sp) => sp.ean).filter((e): e is string => !!e))];
+  const novaRows = eans.length
+    ? await db.$queryRaw<{ ean: string; nova: number }[]>`SELECT ean, nova FROM "ProductNova" WHERE nova IS NOT NULL AND ean = ANY(${eans}::text[])`
+    : [];
+  const novaByEan = new Map(novaRows.map((r) => [r.ean, r.nova]));
+
   const offers = cp.storeProducts
     .filter((sp) => sp.price)
     .map((sp) => {
@@ -112,6 +119,7 @@ export async function getProductDetail(slug: string) {
         brand: sp.brand.name,
         ownBrand: sp.brand.isOwnBrand,
         title: sp.title,
+        nova: sp.ean ? (novaByEan.get(sp.ean) ?? null) : null,
         priceCents: p.priceCents,
         effectiveCents: effective,
         unitPriceCents: p.unitPriceCents ?? null,

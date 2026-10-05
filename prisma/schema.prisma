@@ -358,3 +358,11 @@ model CrawlRun {
 
   @@index([store, startedAt])
 }
+
+/// Bewerkingsgraad (NOVA 1–4) per barcode, uit Open Food Facts (ODbL). `nova` null = gecontroleerd,
+/// geen score bekend (de meeste producten). Gevuld door `npm run enrich-nova`, gelezen met raw SQL.
+model ProductNova {
+  ean       String   @id
+  nova      Int?
+  checkedAt DateTime @default(now())
+}
