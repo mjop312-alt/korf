@@ -22,14 +22,14 @@ export const OFFERS_PAGE_SIZE = 30;
 
 /** Lopende aanbiedingen, met de hoogste korting (%) eerst; gepagineerd. */
 export async function getOffers(
-  opts: { store?: string; category?: string; page?: number } = {},
+  opts: { stores?: string[]; category?: string; page?: number } = {},
 ): Promise<{ total: number; offers: OfferView[] }> {
   const page = Math.max(opts.page ?? 1, 1);
   const where = [
     Prisma.sql`pr."isPromo" AND pr."promoPriceCents" IS NOT NULL AND pm."endsAt" >= now()`,
     Prisma.sql`sp.available AND sp."canonicalProductId" IS NOT NULL`,
   ];
-  if (opts.store) where.push(Prisma.sql`s.slug = ${opts.store}`);
+  if (opts.stores?.length) where.push(Prisma.sql`s.slug = ANY(${opts.stores}::text[])`);
   if (opts.category) where.push(Prisma.sql`c.slug = ${opts.category}`);
 
   const rows = await db.$queryRaw<

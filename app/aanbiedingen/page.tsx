@@ -24,8 +24,10 @@ export default async function AanbiedingenPage({
 }) {
   const sp = await searchParams;
   const page = Math.max(parseInt(sp.pagina ?? "1", 10) || 1, 1);
+  // meerdere winkels tegelijk: kommagescheiden ("winkel=ah,jumbo"), net als op /producten
+  const selectedStores = (sp.winkel ?? "").split(",").map((x) => x.trim()).filter(Boolean);
   const [{ offers, total }, filters, userId] = await Promise.all([
-    getOffers({ store: sp.winkel, category: sp.categorie, page }),
+    getOffers({ stores: selectedStores, category: sp.categorie, page }),
     getOfferFilters(),
     getUserId(),
   ]);
@@ -42,6 +44,13 @@ export default async function AanbiedingenPage({
     return s ? `/aanbiedingen?${s}` : "/aanbiedingen";
   };
 
+  const toggleStore = (slug: string) => {
+    const next = new Set(selectedStores);
+    if (next.has(slug)) next.delete(slug);
+    else next.add(slug);
+    return withParam("winkel", next.size ? [...next].join(",") : undefined);
+  };
+
   return (
     <div className="min-h-screen bg-ground text-text">
       <SiteHeader />
@@ -54,9 +63,9 @@ export default async function AanbiedingenPage({
         <div className="mt-6 space-y-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="mr-1 font-mono text-[0.62rem] uppercase text-muted">Winkel</span>
-            <Link href={withParam("winkel", undefined)} className={chip(!sp.winkel)}>alle</Link>
+            <Link href={withParam("winkel", undefined)} className={chip(selectedStores.length === 0)}>alle</Link>
             {filters.stores.map((s) => (
-              <Link key={s.slug} href={withParam("winkel", s.slug)} className={chip(sp.winkel === s.slug)}>
+              <Link key={s.slug} href={toggleStore(s.slug)} className={chip(selectedStores.includes(s.slug))}>
                 {s.name}
               </Link>
             ))}
