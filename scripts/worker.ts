@@ -141,10 +141,15 @@ async function runLoop(slug: StoreSlug, startDelayMs: number): Promise<boolean> 
     }
     if (once) break;
 
-    // na een fout oplopend wachten (5, 10, 20… max 60 min); na succes de rest van het interval
+    // na een fout oplopend wachten (5, 10, 20… max 60 min); na succes de rest van het interval.
+    // Uitzondering: een DATABASE-verbindingsfout (bv. de laptop kwam net uit slaapstand en het netwerk
+    // is er nog niet) is tijdelijk en heeft niets met de winkel te maken — dan al na 1–5 min opnieuw.
+    const dbDown = !r.ok && /database server|P1001|P1002|P1017|closed the connection/i.test(r.error ?? "");
     const wait = r.ok
       ? Math.max(30_000, intervalMs(slug) - (Date.now() - t0))
-      : Math.min(60 * 60_000, 5 * 60_000 * 2 ** (fails - 1));
+      : dbDown
+        ? Math.min(5 * 60_000, 60_000 * fails)
+        : Math.min(60 * 60_000, 5 * 60_000 * 2 ** (fails - 1));
     say(slug, `volgende ronde over ${fmtMin(wait)}`);
     await nap(wait);
   }
